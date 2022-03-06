@@ -1,0 +1,215 @@
+use layout::{
+    position::{Offset, Quad, Size},
+    Error, Layout,
+};
+use printpdf::PdfDocument;
+
+use crate::{font::FontSources, RenderContext};
+
+use super::from_unit;
+
+pub struct Renderer {
+    context: RenderContext,
+    size: Size,
+}
+
+impl Renderer {
+    pub fn new(document_title: &str, margin: Quad, size: Size, font_sources: FontSources) -> Self {
+        let (document, page, layer) = PdfDocument::new(
+            document_title,
+            from_unit(size.width()),
+            from_unit(size.height()),
+            "default",
+        );
+
+        let context = RenderContext::new(document, page, layer, margin, size.clone(), font_sources);
+
+        Self { context, size }
+    }
+
+    pub fn render(mut self, mut layout: Box<dyn Layout>) -> Result<Vec<u8>, Error> {
+        layout.measure(&mut self.context, self.size.clone())?;
+        layout.lay_out(&mut self.context, Offset::zero(), self.size.clone())?;
+
+        self.context.complete_fonts()?;
+        layout.render(&mut self.context)?;
+
+        let pdf = self.context.save_to_bytes()?;
+
+        Ok(pdf)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::{
+        fs::File,
+        io::{BufWriter, Write},
+    };
+
+    use layout::{
+        position::{Quad, Size},
+        unit::{Mm, Pt},
+        Axis, Border, DecoratedBox, DefaultFactory, Factory, Features, Font, Rgba, Stroke, Style,
+        Text,
+    };
+
+    use crate::{new_font_sources, Renderer};
+
+    #[test]
+    fn h_center() {
+        let mut fonts = new_font_sources();
+
+        let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
+        fonts.add("LatoReg", font_bin).unwrap();
+
+        let renderer = Renderer::new(
+            "Text",
+            Quad::square(Mm(10.0)),
+            Size::new(Mm(210.0), Mm(297.0)),
+            fonts,
+        );
+
+        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+
+        let outer = DefaultFactory::hbox()
+            .size(Mm(190.0))
+            .child(DefaultFactory::hfill().grow(2))
+            .child(Text::new("Žáňa Nováková jr.").style(style))
+            .child(DefaultFactory::hfill().grow(1));
+
+        let pdf = renderer.render(Box::new(outer)).unwrap();
+
+        BufWriter::new(File::create("test_fonts_th.pdf").unwrap())
+            .write_all(&pdf)
+            .unwrap();
+    }
+
+    #[test]
+    fn v_center() {
+        let mut fonts = new_font_sources();
+
+        let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
+        fonts.add("LatoReg", font_bin).unwrap();
+
+        let renderer = Renderer::new(
+            "Text",
+            Quad::square(Mm(10.0)),
+            Size::new(Mm(210.0), Mm(297.0)),
+            fonts,
+        );
+
+        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+
+        let outer = DefaultFactory::hbox()
+            .with_mark("1")
+            .size(Mm(190.0))
+            .child(DefaultFactory::hfill().with_mark("2").grow(2))
+            .child(
+                DefaultFactory::vbox()
+                    .with_mark("3")
+                    .size(Mm(277.0))
+                    .child(DefaultFactory::vfill().grow(1).with_mark("4"))
+                    .child(Text::new("Žáňa Nováková jr.").with_mark("5").style(style))
+                    .child(DefaultFactory::vfill().grow(1).with_mark("6")),
+            )
+            .child(DefaultFactory::hfill().grow(1).with_mark("7"));
+
+        let pdf = renderer.render(Box::new(outer)).unwrap();
+
+        BufWriter::new(File::create("test_fonts_tv.pdf").unwrap())
+            .write_all(&pdf)
+            .unwrap();
+    }
+
+    #[test]
+    fn padding() {
+        let mut fonts = new_font_sources();
+
+        let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
+        fonts.add("LatoReg", font_bin).unwrap();
+
+        let renderer = Renderer::new(
+            "Text",
+            Quad::square(Mm(10.0)),
+            Size::new(Mm(210.0), Mm(297.0)),
+            fonts,
+        );
+
+        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+
+        let outer = DefaultFactory::hbox()
+            .with_mark("outer")
+            .size(Mm(190.0))
+            .child(DefaultFactory::hfill().grow(2))
+            .child(
+                DefaultFactory::vbox()
+                    .with_mark("inner")
+                    .size(Mm(277.0))
+                    .child(DefaultFactory::vfill().grow(1))
+                    .child(
+                        DecoratedBox::new(Axis::Vertical)
+                            .mark("deco")
+                            .style(Style::new().with_padding(Quad::square(Mm(4.0))))
+                            .child(Text::new("Žáňa Nováková jr.").style(style).with_mark("TT")),
+                    )
+                    .child(DefaultFactory::vfill().grow(1)),
+            )
+            .child(DefaultFactory::hfill().grow(1));
+
+        let pdf = renderer.render(Box::new(outer)).unwrap();
+
+        BufWriter::new(File::create("test_padding.pdf").unwrap())
+            .write_all(&pdf)
+            .unwrap();
+    }
+
+    #[test]
+    fn border() {
+        let mut fonts = new_font_sources();
+
+        let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
+        fonts.add("LatoReg", font_bin).unwrap();
+
+        let renderer = Renderer::new(
+            "Text",
+            Quad::square(Mm(10.0)),
+            Size::new(Mm(210.0), Mm(297.0)),
+            fonts,
+        );
+
+        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+
+        let outer = DefaultFactory::hbox()
+            .with_mark("outer")
+            .size(Mm(190.0))
+            .child(DefaultFactory::hfill().grow(2))
+            .child(
+                DefaultFactory::vbox()
+                    .with_mark("inner")
+                    .size(Mm(277.0))
+                    .child(DefaultFactory::vfill().grow(1))
+                    .child(
+                        DecoratedBox::new(Axis::Vertical)
+                            .mark("deco")
+                            .style(
+                                Style::new()
+                                    .with_border(Border::h(Stroke::new(
+                                        Rgba::from((135, 235, 64, 0.0)),
+                                        Pt(1.0),
+                                    )))
+                                    .with_padding(Quad::square(Mm(4.0))),
+                            )
+                            .child(Text::new("Žáňa Nováková jr.").style(style).with_mark("TT")),
+                    )
+                    .child(DefaultFactory::vfill().grow(1)),
+            )
+            .child(DefaultFactory::hfill().grow(1));
+
+        let pdf = renderer.render(Box::new(outer)).unwrap();
+
+        BufWriter::new(File::create("test_border.pdf").unwrap())
+            .write_all(&pdf)
+            .unwrap();
+    }
+}

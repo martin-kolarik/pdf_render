@@ -1,0 +1,11 @@
+[package]
+name = "pdf"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+layout = { path = "../layout" }
+
+allsorts = { version = "^0.7" }
+indexmap = { version = "^1.8" }
+printpdf = { version = "^0.5" }
