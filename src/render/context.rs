@@ -121,6 +121,7 @@ pub struct RenderContext {
     page_end: Option<Offset>,
 
     style: Style,
+    debug_frame: bool,
 }
 
 impl RenderContext {
@@ -145,6 +146,7 @@ impl RenderContext {
             page_start: None,
             page_end: None,
             style: Style::default(),
+            debug_frame: true,
         };
         render_context.set_page_offsets(Unit::from(0));
 
@@ -264,23 +266,25 @@ impl layout::RenderContext for RenderContext {
     }
 
     fn debug_frame(&self, content_position: &Offset, size: &Size) {
-        let content_position = self.page_content_offset(content_position);
-        let top_left = self.page_margin.offset(&content_position);
-        let bottom_right = &top_left + size;
+        if self.debug_frame {
+            let content_position = self.page_content_offset(content_position);
+            let top_left = self.page_margin.offset(&content_position);
+            let bottom_right = &top_left + size;
 
-        let points = [
-            &top_left,
-            &Offset::new(bottom_right.x(), top_left.y()),
-            &bottom_right,
-            &Offset::new(top_left.x(), bottom_right.y()),
-            &top_left,
-        ];
+            let points = [
+                &top_left,
+                &Offset::new(bottom_right.x(), top_left.y()),
+                &bottom_right,
+                &Offset::new(top_left.x(), bottom_right.y()),
+                &top_left,
+            ];
 
-        self.layer
-            .set_outline_color(from_rgba(&Rgba::from((240, 240, 240, 1.0))));
-        self.layer.set_outline_thickness(0.1);
+            self.layer
+                .set_outline_color(from_rgba(&Rgba::from((240, 240, 240, 1.0))));
+            self.layer.set_outline_thickness(0.1);
 
-        self.line_inner(&points);
+            self.line_inner(&points);
+        }
     }
 
     fn line(&mut self, from: &Offset, to: &Offset, stroke: &Stroke) {
