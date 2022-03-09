@@ -50,7 +50,7 @@ mod tests {
     use layout::{
         position::{Quad, Size},
         unit::{Mm, Pt},
-        Axis, Border, DecoratedBox, DefaultFactory, Factory, Features, Font, Rgba, Stroke, Style,
+        Axis, Border, DefaultFactory, Factory, Features, Font, LayoutBox, Rgba, Stroke, Style,
         Text,
     };
 
@@ -66,11 +66,12 @@ mod tests {
         let renderer = Renderer::new(
             "Text",
             Quad::square(Mm(10.0)),
-            Size::new(Mm(210.0), Mm(297.0)),
+            Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
         );
 
-        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+        let style =
+            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
 
         let outer = DefaultFactory::hbox()
             .size(Mm(190.0))
@@ -95,25 +96,26 @@ mod tests {
         let renderer = Renderer::new(
             "Text",
             Quad::square(Mm(10.0)),
-            Size::new(Mm(210.0), Mm(297.0)),
+            Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
         );
 
-        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+        let style =
+            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
 
         let outer = DefaultFactory::hbox()
-            .with_mark("1")
+            .mark("1")
             .size(Mm(190.0))
-            .child(DefaultFactory::hfill().with_mark("2").grow(2))
+            .child(DefaultFactory::hfill().mark("2").grow(2))
             .child(
                 DefaultFactory::vbox()
-                    .with_mark("3")
+                    .mark("3")
                     .size(Mm(277.0))
-                    .child(DefaultFactory::vfill().grow(1).with_mark("4"))
-                    .child(Text::new("Žáňa Nováková jr.").with_mark("5").style(style))
-                    .child(DefaultFactory::vfill().grow(1).with_mark("6")),
+                    .child(DefaultFactory::vfill().grow(1).mark("4"))
+                    .child(Text::new("Žáňa Nováková jr.").mark("5").style(style))
+                    .child(DefaultFactory::vfill().grow(1).mark("6")),
             )
-            .child(DefaultFactory::hfill().grow(1).with_mark("7"));
+            .child(DefaultFactory::hfill().grow(1).mark("7"));
 
         let pdf = renderer.render(Box::new(outer)).unwrap();
 
@@ -132,26 +134,27 @@ mod tests {
         let renderer = Renderer::new(
             "Text",
             Quad::square(Mm(10.0)),
-            Size::new(Mm(210.0), Mm(297.0)),
+            Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
         );
 
-        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+        let style =
+            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
 
         let outer = DefaultFactory::hbox()
-            .with_mark("outer")
+            .mark("outer")
             .size(Mm(190.0))
             .child(DefaultFactory::hfill().grow(2))
             .child(
                 DefaultFactory::vbox()
-                    .with_mark("inner")
+                    .mark("inner")
                     .size(Mm(277.0))
                     .child(DefaultFactory::vfill().grow(1))
                     .child(
-                        DecoratedBox::new(Axis::Vertical)
+                        LayoutBox::new(Axis::Vertical)
                             .mark("deco")
                             .style(Style::new().with_padding(Quad::square(Mm(4.0))))
-                            .child(Text::new("Žáňa Nováková jr.").style(style).with_mark("TT")),
+                            .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
                     .child(DefaultFactory::vfill().grow(1)),
             )
@@ -174,23 +177,24 @@ mod tests {
         let renderer = Renderer::new(
             "Text",
             Quad::square(Mm(10.0)),
-            Size::new(Mm(210.0), Mm(297.0)),
+            Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
         );
 
-        let style = Style::default().with_font(Font::new("LatoReg", Pt(10.0), Features::default()));
+        let style =
+            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
 
         let outer = DefaultFactory::hbox()
-            .with_mark("outer")
+            .mark("outer")
             .size(Mm(190.0))
             .child(DefaultFactory::hfill().grow(2))
             .child(
                 DefaultFactory::vbox()
-                    .with_mark("inner")
+                    .mark("inner")
                     .size(Mm(277.0))
                     .child(DefaultFactory::vfill().grow(1))
                     .child(
-                        DecoratedBox::new(Axis::Vertical)
+                        LayoutBox::new(Axis::Vertical)
                             .mark("deco")
                             .style(
                                 Style::new()
@@ -200,7 +204,7 @@ mod tests {
                                     )))
                                     .with_padding(Quad::square(Mm(4.0))),
                             )
-                            .child(Text::new("Žáňa Nováková jr.").style(style).with_mark("TT")),
+                            .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
                     .child(DefaultFactory::vfill().grow(1)),
             )

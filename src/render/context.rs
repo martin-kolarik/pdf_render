@@ -381,12 +381,15 @@ mod tests {
             page,
             layer,
             Quad::empty(),
-            Size::new(Mm(210.0), Mm(297.0)),
+            Size::fixed(Mm(210.0), Mm(297.0)),
             sources,
         );
 
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(36.0), Features::empty().pnum()));
+        let style = Style::default().with_font(Font::new(
+            "LatoReg",
+            Pt(36.0),
+            Some(Features::empty().pnum()),
+        ));
 
         let text1 = rctx
             .typeset(&style, "Fimfifárumík 12115 jgenealogie", None)
@@ -406,11 +409,17 @@ mod tests {
 
         rctx.text(&Offset::new(Mm(20.0), Mm(40.0)), &style, &text2, true);
 
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(18.0), Features::empty().pnum()));
+        let style = Style::default().with_font(Font::new(
+            "LatoReg",
+            Pt(18.0),
+            Some(Features::empty().pnum()),
+        ));
         rctx.text(&Offset::new(Mm(20.0), Mm(60.0)), &style, &text2, true);
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(12.0), Features::empty().pnum()));
+        let style = Style::default().with_font(Font::new(
+            "LatoReg",
+            Pt(12.0),
+            Some(Features::empty().pnum()),
+        ));
         rctx.text(
             &Offset::new(Mm(20.0) + text2.width * Pt(18.0), Mm(60.0)),
             &style,
