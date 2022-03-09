@@ -10,26 +10,38 @@ use super::from_unit;
 
 pub struct Renderer {
     context: RenderContext,
-    size: Size,
+    content_size: Size,
 }
 
 impl Renderer {
-    pub fn new(document_title: &str, margin: Quad, size: Size, font_sources: FontSources) -> Self {
+    pub fn new(
+        document_title: &str,
+        page_margin: Quad,
+        page_size: Size,
+        font_sources: FontSources,
+    ) -> Self {
         let (document, page, layer) = PdfDocument::new(
             document_title,
-            from_unit(size.width()),
-            from_unit(size.height()),
+            from_unit(page_size.width()),
+            from_unit(page_size.height()),
             "default",
         );
 
-        let context = RenderContext::new(document, page, layer, margin, size.clone(), font_sources);
+        let mut content_size = page_size.clone();
+        page_margin.narrow(None, Some(&mut content_size));
 
-        Self { context, size }
+        let context =
+            RenderContext::new(document, page, layer, page_margin, page_size, font_sources);
+
+        Self {
+            context,
+            content_size,
+        }
     }
 
     pub fn render(mut self, mut layout: Box<dyn Layout>) -> Result<Vec<u8>, Error> {
-        layout.measure(&mut self.context, self.size.clone())?;
-        layout.lay_out(&mut self.context, Offset::zero(), self.size.clone())?;
+        layout.measure(&mut self.context, self.content_size.clone())?;
+        layout.lay_out(&mut self.context, Offset::zero(), self.content_size.clone())?;
 
         self.context.complete_fonts()?;
         layout.render(&mut self.context)?;
