@@ -39,6 +39,11 @@ impl Renderer {
         }
     }
 
+    pub fn with_debug_frame(mut self, debug_frame: bool) -> Self {
+        self.context = self.context.with_debug_frame(debug_frame);
+        self
+    }
+
     pub fn render(mut self, mut layout: Box<dyn Layout>) -> Result<Vec<u8>, Error> {
         layout.measure(&mut self.context, self.content_size.clone())?;
         layout.lay_out(&mut self.context, Offset::zero(), self.content_size.clone())?;

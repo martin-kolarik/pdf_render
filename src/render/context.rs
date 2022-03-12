@@ -146,11 +146,16 @@ impl RenderContext {
             page_start: None,
             page_end: None,
             style: Style::default(),
-            debug_frame: true,
+            debug_frame: false,
         };
         render_context.set_page_offsets(Unit::from(0));
 
         render_context
+    }
+
+    pub fn with_debug_frame(mut self, debug_frame: bool) -> Self {
+        self.debug_frame = debug_frame;
+        self
     }
 
     pub fn complete_fonts(&mut self) -> Result<(), Error> {
