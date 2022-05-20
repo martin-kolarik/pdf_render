@@ -1,5 +1,3 @@
-#![feature(bool_to_option)]
-
 mod font;
 
 mod render;
