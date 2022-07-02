@@ -286,7 +286,7 @@ impl layout::RenderContext for RenderContext {
 
             self.layer
                 .set_outline_color(from_rgba(&Rgba::from((240, 240, 240, 1.0))));
-            self.layer.set_outline_thickness(0.1);
+            self.layer.set_outline_thickness(0.25);
 
             self.line_inner(&points);
         }
@@ -388,7 +388,8 @@ mod tests {
             Quad::empty(),
             Size::fixed(Mm(210.0), Mm(297.0)),
             sources,
-        );
+        )
+        .with_debug_frame(true);
 
         let style = Style::default().with_font(Font::new(
             "LatoReg",

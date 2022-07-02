@@ -85,7 +85,8 @@ mod tests {
             Quad::square(Mm(10.0)),
             Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
-        );
+        )
+        .with_debug_frame(true);
 
         let style =
             Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
@@ -115,7 +116,8 @@ mod tests {
             Quad::square(Mm(10.0)),
             Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
-        );
+        )
+        .with_debug_frame(true);
 
         let style =
             Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
@@ -153,7 +155,8 @@ mod tests {
             Quad::square(Mm(10.0)),
             Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
-        );
+        )
+        .with_debug_frame(true);
 
         let style =
             Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
@@ -196,7 +199,8 @@ mod tests {
             Quad::square(Mm(10.0)),
             Size::fixed(Mm(210.0), Mm(297.0)),
             fonts,
-        );
+        )
+        .with_debug_frame(true);
 
         let style =
             Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
