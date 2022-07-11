@@ -4,22 +4,27 @@ use allsorts::{
 };
 use indexmap::IndexSet;
 use layout::{unit::Em, Error, Features, GlyphPosition, TextPosition};
+use ouroboros::self_referencing;
 use std::{
     borrow::{Borrow, Cow},
-    sync::{Arc, Mutex},
+    collections::HashMap,
+    sync::{Arc, Mutex, RwLock},
+    time::Instant,
 };
 
 const NON_TTC_TABLE: usize = 0;
 
+type FontSource = Arc<Cow<'static, [u8]>>;
+
 #[derive(Clone)]
 pub struct FontSources {
-    data: Arc<Mutex<Vec<Arc<FontSource>>>>,
+    data: Arc<RwLock<HashMap<String, FontSource>>>,
 }
 
 impl FontSources {
     pub fn new() -> Self {
         Self {
-            data: Arc::new(Mutex::new(vec![])),
+            data: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
@@ -36,33 +41,24 @@ impl FontSources {
         name: impl Into<String>,
         source: Cow<'static, [u8]>,
     ) -> Result<(), Error> {
-        let name = name.into();
-        let mut lock = self
-            .data
-            .lock()
-            .map_err(|l| Error::LockError(l.to_string()))?;
-        if !lock.iter().any(|source| source.name == name) {
-            lock.push(Arc::new(FontSource::new(name, source)?));
-        }
+        self.data
+            .write()
+            .map_err(|l| Error::LockError(l.to_string()))?
+            .insert(name.into(), Arc::new(source));
         Ok(())
     }
 
-    pub fn get<B>(&self, name: &B) -> Result<Arc<Font>, Error>
+    pub fn get<B>(&self, name: &B) -> Result<FontSource, Error>
     where
         B: Borrow<str> + ?Sized,
     {
         let name = name.borrow();
-
-        let source = self
-            .data
-            .lock()
+        self.data
+            .read()
             .map_err(|l| Error::LockError(l.to_string()))?
-            .iter()
-            .find(|&source| source.name == name)
-            .ok_or_else(|| Error::UnknownFont(name.to_owned()))?
-            .clone();
-
-        Ok(Arc::new(Font::from_source(source)))
+            .get(name)
+            .cloned()
+            .ok_or_else(|| Error::UnknownFont(name.to_owned()))
     }
 }
 
@@ -72,47 +68,105 @@ impl Default for FontSources {
     }
 }
 
-struct FontSource {
-    name: String,
-    source: Arc<Cow<'static, [u8]>>,
+#[derive(Clone)]
+pub struct Fonts {
+    sources: FontSources,
+    data: Arc<RwLock<HashMap<String, Font>>>,
 }
 
-impl FontSource {
-    fn new(name: String, source: Cow<'static, [u8]>) -> Result<Self, Error> {
-        Ok(Self {
-            name,
-            source: Arc::new(source),
-        })
+impl Fonts {
+    pub fn new(sources: FontSources) -> Self {
+        Self {
+            sources,
+            data: Arc::new(RwLock::new(HashMap::new())),
+        }
+    }
+
+    pub fn get<B>(&self, name: &B) -> Result<Font, Error>
+    where
+        B: Borrow<str> + ?Sized,
+    {
+        let name = name.borrow();
+        if let Some(font) = self
+            .data
+            .read()
+            .map_err(|l| Error::LockError(l.to_string()))?
+            .get(name)
+        {
+            return Ok(font.clone());
+        }
+
+        let source = self.sources.get(name)?;
+        let cached_font = CachedAllsortsFont::from_source(name, source)?;
+        let font = Font::new(cached_font);
+        self.data
+            .write()
+            .map_err(|l| Error::LockError(l.to_string()))?
+            .insert(name.to_owned(), font.clone());
+
+        Ok(font)
     }
 }
 
+#[derive(Clone)]
 pub struct Font {
-    source: Arc<FontSource>,
+    cached_font: Arc<Mutex<CachedAllsortsFont>>,
 }
 
 impl Font {
-    fn from_source(source: Arc<FontSource>) -> Self {
-        Self { source }
+    pub fn new(cached_font: CachedAllsortsFont) -> Self {
+        Self {
+            cached_font: Arc::new(Mutex::new(cached_font)),
+        }
+    }
+
+    fn with<F, U>(&self, f: F) -> U
+    where
+        F: Fn(&CachedAllsortsFont) -> U,
+    {
+        let cached_font = self.cached_font.lock().unwrap();
+        f(&cached_font)
+    }
+
+    fn with_mut<F, U>(&self, mut f: F) -> U
+    where
+        F: FnMut(&mut CachedAllsortsFont) -> U,
+    {
+        let mut cached_font = self.cached_font.lock().unwrap();
+        f(&mut cached_font)
     }
 
     pub fn typeset<B>(&self, text: &B, features: &Features) -> Result<TextPosition, Error>
     where
         B: Borrow<str> + ?Sized,
     {
-        let scope = ReadScope::new(&self.source.source);
-        let font_data = scope.read::<FontData>()?;
-        let provider = font_data.table_provider(NON_TTC_TABLE)?;
-        let mut font = allsorts::Font::new(provider)?
-            .ok_or_else(|| Error::MalformedFont(self.source.name.clone()))?;
+        self.with_mut(|cached_font| {
+            let start = Instant::now();
 
+            let text_position = cached_font
+                .with_font_mut(|font| Self::typeset_inner(font, text.borrow(), features));
+
+            log::error!("1: {:?}", start.elapsed());
+
+            text_position
+        })
+    }
+
+    fn typeset_inner(
+        font: &mut allsorts::Font<'_>,
+        text: &str,
+        features: &Features,
+    ) -> Result<TextPosition, Error> {
         let features = features.into();
 
         let glyphs = font.map_glyphs(text.borrow(), tag::LATN, MatchingPresentation::NotRequired);
+
         let shapes = font
             .shape(glyphs, tag::LATN, None, &features, true)
             .map_or_else(|(_, shapes)| shapes, |shapes| shapes);
+
         let positions = glyph_position::GlyphLayout::new(
-            &mut font,
+            font,
             &shapes,
             glyph_position::TextDirection::LeftToRight,
             false,
@@ -169,19 +223,45 @@ impl Font {
     }
 
     pub fn subset(&self, glyph_collector: &IndexSet<u16>) -> Result<Option<Vec<u8>>, Error> {
+        self.with(|cached_font| Self::subset_inner(cached_font.borrow_source(), glyph_collector))
+    }
+
+    fn subset_inner(
+        source: &FontSource,
+        glyph_collector: &IndexSet<u16>,
+    ) -> Result<Option<Vec<u8>>, Error> {
         if glyph_collector.is_empty() {
             return Ok(None);
         }
         let subsetted_glyphs: Vec<u16> = glyph_collector.iter().copied().collect();
 
-        let scope = ReadScope::new(&self.source.source);
+        let scope = ReadScope::new(source);
         let font_data = scope.read::<FontData>()?;
         let provider = font_data.table_provider(NON_TTC_TABLE)?;
 
-        match subset(&provider, &subsetted_glyphs, None) {
+        match subset(&provider, &subsetted_glyphs) {
             Ok(subset) => Ok(Some(subset)),
             Err(error) => Err(error.into()),
         }
+    }
+}
+
+#[self_referencing]
+pub struct CachedAllsortsFont {
+    source: FontSource,
+    #[borrows(source)]
+    #[covariant]
+    font: allsorts::Font<'this>,
+}
+
+impl CachedAllsortsFont {
+    fn from_source(name: &str, source: FontSource) -> Result<Self, Error> {
+        Self::try_new(source, |source| {
+            let scope = ReadScope::new(source);
+            let font_data = scope.read::<FontData>()?;
+            let provider = font_data.table_provider(NON_TTC_TABLE)?;
+            allsorts::Font::new(provider)?.ok_or_else(|| Error::MalformedFont(name.to_owned()))
+        })
     }
 }
 
@@ -194,6 +274,8 @@ mod tests {
     use printpdf::{Color, Line, Mm, PdfDocument, Point, Pt, Rgb};
 
     use crate::FontSources;
+
+    use super::Fonts;
 
     #[test]
     fn render() {
@@ -225,7 +307,9 @@ mod tests {
         let mut sh_sources = FontSources::new();
         sh_sources.add("LatoReg", bin_font).unwrap();
 
-        let sh_font = sh_sources.get("LatoReg").unwrap();
+        let sh_fonts = Fonts::new(sh_sources);
+
+        let sh_font = sh_fonts.get("LatoReg").unwrap();
 
         let mut collector = IndexSet::<u16>::new();
         collector.insert(0);
@@ -238,7 +322,7 @@ mod tests {
             )
             .unwrap();
 
-        let subsetted_font = sh_sources
+        let subsetted_font = sh_fonts
             .get("LatoReg")
             .unwrap()
             .subset(&collector)

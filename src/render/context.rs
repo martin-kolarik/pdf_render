@@ -11,7 +11,7 @@ use printpdf::{
     PdfPageReference, Point,
 };
 
-use crate::font::FontSources;
+use crate::font::Fonts;
 
 use super::{from_pt, from_rgba, from_unit};
 
@@ -35,12 +35,12 @@ impl RenderFont {
 }
 
 pub struct RenderFonts {
-    fonts: FontSources,
+    fonts: Fonts,
     render_fonts: Vec<RenderFont>,
 }
 
 impl RenderFonts {
-    pub fn new(fonts: FontSources) -> Self {
+    pub fn new(fonts: Fonts) -> Self {
         Self {
             fonts,
             render_fonts: vec![],
@@ -131,13 +131,13 @@ impl RenderContext {
         layer: PdfLayerIndex,
         margin: Quad,
         size: Size,
-        font_sources: FontSources,
+        fonts: Fonts,
     ) -> Self {
         let page = document.get_page(page);
         let layer = page.get_layer(layer);
 
         let mut render_context = Self {
-            fonts: RenderFonts::new(font_sources),
+            fonts: RenderFonts::new(fonts),
             document,
             page,
             layer,
@@ -367,7 +367,7 @@ mod tests {
     };
     use printpdf::PdfDocument;
 
-    use crate::new_font_sources;
+    use crate::{new_font_sources, new_fonts};
 
     use super::RenderContext;
 
@@ -378,6 +378,8 @@ mod tests {
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
         sources.add("LatoReg", font_bin).unwrap();
 
+        let fonts = new_fonts(sources);
+
         let (document, page, layer) =
             PdfDocument::new("Test", printpdf::Mm(210.0), printpdf::Mm(297.0), "default");
 
@@ -387,7 +389,7 @@ mod tests {
             layer,
             Quad::empty(),
             Size::fixed(Mm(210.0), Mm(297.0)),
-            sources,
+            fonts,
         )
         .with_debug_frame(true);
 

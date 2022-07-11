@@ -4,7 +4,7 @@ use layout::{
 };
 use printpdf::PdfDocument;
 
-use crate::{font::FontSources, RenderContext};
+use crate::{font::Fonts, RenderContext};
 
 use super::from_unit;
 
@@ -14,12 +14,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(
-        document_title: &str,
-        page_margin: Quad,
-        page_size: Size,
-        font_sources: FontSources,
-    ) -> Self {
+    pub fn new(document_title: &str, page_margin: Quad, page_size: Size, fonts: Fonts) -> Self {
         let (document, page, layer) = PdfDocument::new(
             document_title,
             from_unit(page_size.width()),
@@ -30,8 +25,7 @@ impl Renderer {
         let mut content_size = page_size.clone();
         page_margin.narrow(None, Some(&mut content_size));
 
-        let context =
-            RenderContext::new(document, page, layer, page_margin, page_size, font_sources);
+        let context = RenderContext::new(document, page, layer, page_margin, page_size, fonts);
 
         Self {
             context,
@@ -71,14 +65,16 @@ mod tests {
         Text,
     };
 
-    use crate::{new_font_sources, Renderer};
+    use crate::{new_font_sources, new_fonts, Renderer};
 
     #[test]
     fn h_center() {
-        let mut fonts = new_font_sources();
+        let mut sources = new_font_sources();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        fonts.add("LatoReg", font_bin).unwrap();
+        sources.add("LatoReg", font_bin).unwrap();
+
+        let fonts = new_fonts(sources);
 
         let renderer = Renderer::new(
             "Text",
@@ -106,10 +102,12 @@ mod tests {
 
     #[test]
     fn v_center() {
-        let mut fonts = new_font_sources();
+        let mut sources = new_font_sources();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        fonts.add("LatoReg", font_bin).unwrap();
+        sources.add("LatoReg", font_bin).unwrap();
+
+        let fonts = new_fonts(sources);
 
         let renderer = Renderer::new(
             "Text",
@@ -145,10 +143,12 @@ mod tests {
 
     #[test]
     fn padding() {
-        let mut fonts = new_font_sources();
+        let mut sources = new_font_sources();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        fonts.add("LatoReg", font_bin).unwrap();
+        sources.add("LatoReg", font_bin).unwrap();
+
+        let fonts = new_fonts(sources);
 
         let renderer = Renderer::new(
             "Text",
@@ -189,10 +189,12 @@ mod tests {
 
     #[test]
     fn border() {
-        let mut fonts = new_font_sources();
+        let mut sources = new_font_sources();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        fonts.add("LatoReg", font_bin).unwrap();
+        sources.add("LatoReg", font_bin).unwrap();
+
+        let fonts = new_fonts(sources);
 
         let renderer = Renderer::new(
             "Text",
