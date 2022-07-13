@@ -9,7 +9,6 @@ use std::{
     borrow::{Borrow, Cow},
     collections::HashMap,
     sync::{Arc, Mutex, RwLock},
-    time::Instant,
 };
 
 const NON_TTC_TABLE: usize = 0;
@@ -141,14 +140,7 @@ impl Font {
         B: Borrow<str> + ?Sized,
     {
         self.with_mut(|cached_font| {
-            let start = Instant::now();
-
-            let text_position = cached_font
-                .with_font_mut(|font| Self::typeset_inner(font, text.borrow(), features));
-
-            log::error!("1: {:?}", start.elapsed());
-
-            text_position
+            cached_font.with_font_mut(|font| Self::typeset_inner(font, text.borrow(), features))
         })
     }
 
