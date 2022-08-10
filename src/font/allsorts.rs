@@ -1,6 +1,10 @@
 use allsorts::{
-    binary::read::ReadScope, font::MatchingPresentation, font_data::FontData, glyph_position,
-    subset::subset, tag,
+    binary::read::ReadScope,
+    font::MatchingPresentation,
+    font_data::{DynamicFontTableProvider, FontData},
+    glyph_position,
+    subset::subset,
+    tag,
 };
 use indexmap::IndexSet;
 use layout::{unit::Em, Error, Features, GlyphPosition, TextPosition};
@@ -145,7 +149,7 @@ impl Font {
     }
 
     fn typeset_inner(
-        font: &mut allsorts::Font<'_>,
+        font: &mut allsorts::Font<DynamicFontTableProvider<'_>>,
         text: &str,
         features: &Features,
     ) -> Result<TextPosition, Error> {
@@ -243,7 +247,7 @@ pub struct CachedAllsortsFont {
     source: FontSource,
     #[borrows(source)]
     #[covariant]
-    font: allsorts::Font<'this>,
+    font: allsorts::Font<allsorts::font_data::DynamicFontTableProvider<'this>>,
 }
 
 impl CachedAllsortsFont {
