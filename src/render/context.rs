@@ -1,4 +1,4 @@
-use std::borrow::Borrow;
+use std::{borrow::Borrow, sync::Arc};
 
 use indexmap::IndexSet;
 use layout::{
@@ -120,7 +120,7 @@ pub struct RenderContext {
     page_start: Option<Offset>,
     page_end: Option<Offset>,
 
-    style: Style,
+    style: Arc<Style>,
     debug_frame: bool,
 }
 
@@ -228,7 +228,7 @@ impl RenderContext {
 
 impl layout::MeasureContext for RenderContext {
     fn style(&self) -> &Style {
-        &self.style
+        self.style.as_ref()
     }
 
     fn typeset(
@@ -363,7 +363,7 @@ mod tests {
     use layout::{
         position::{Offset, Quad, Size},
         unit::{Mm, Pt},
-        Features, Font, MeasureContext, RenderContext as _, Style,
+        Features, Font, MeasureContext, RenderContext as _, StyleBuilder,
     };
     use printpdf::PdfDocument;
 
@@ -393,11 +393,13 @@ mod tests {
         )
         .with_debug_frame(true);
 
-        let style = Style::default().with_font(Font::new(
-            "LatoReg",
-            Pt(36.0),
-            Some(Features::empty().pnum()),
-        ));
+        let style = StyleBuilder::default()
+            .with_font(Font::new(
+                "LatoReg",
+                Pt(36.0),
+                Some(Features::empty().pnum()),
+            ))
+            .build();
 
         let text1 = rctx
             .typeset(&style, "Fimfifárumík 12115 jgenealogie", None)
@@ -417,17 +419,21 @@ mod tests {
 
         rctx.text(&Offset::new(Mm(20.0), Mm(40.0)), &style, &text2, true);
 
-        let style = Style::default().with_font(Font::new(
-            "LatoReg",
-            Pt(18.0),
-            Some(Features::empty().pnum()),
-        ));
+        let style = StyleBuilder::default()
+            .with_font(Font::new(
+                "LatoReg",
+                Pt(18.0),
+                Some(Features::empty().pnum()),
+            ))
+            .build();
         rctx.text(&Offset::new(Mm(20.0), Mm(60.0)), &style, &text2, true);
-        let style = Style::default().with_font(Font::new(
-            "LatoReg",
-            Pt(12.0),
-            Some(Features::empty().pnum()),
-        ));
+        let style = StyleBuilder::default()
+            .with_font(Font::new(
+                "LatoReg",
+                Pt(12.0),
+                Some(Features::empty().pnum()),
+            ))
+            .build();
         rctx.text(
             &Offset::new(Mm(20.0) + text2.width * Pt(18.0), Mm(60.0)),
             &style,

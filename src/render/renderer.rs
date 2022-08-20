@@ -61,8 +61,8 @@ mod tests {
     use layout::{
         position::{Quad, Size},
         unit::{Mm, Pt},
-        Axis, Border, DefaultFactory, Factory, Features, Font, LayoutBox, Rgba, Stroke, Style,
-        Text,
+        Axis, Border, DefaultFactory, Factory, Features, Font, LayoutBox, Rgba, Stroke,
+        StyleBuilder, Text,
     };
 
     use crate::{new_font_sources, new_fonts, Renderer};
@@ -84,8 +84,11 @@ mod tests {
         )
         .with_debug_frame(true);
 
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
+        let style = StyleBuilder::default().with_font(Font::new(
+            "LatoReg",
+            Pt(10.0),
+            Some(Features::default()),
+        ));
 
         let outer = DefaultFactory::hbox()
             .size(Mm(190.0))
@@ -117,8 +120,11 @@ mod tests {
         )
         .with_debug_frame(true);
 
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
+        let style = StyleBuilder::default().with_font(Font::new(
+            "LatoReg",
+            Pt(10.0),
+            Some(Features::default()),
+        ));
 
         let outer = DefaultFactory::hbox()
             .mark("1")
@@ -158,8 +164,11 @@ mod tests {
         )
         .with_debug_frame(true);
 
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
+        let style = StyleBuilder::default().with_font(Font::new(
+            "LatoReg",
+            Pt(10.0),
+            Some(Features::default()),
+        ));
 
         let outer = DefaultFactory::hbox()
             .mark("outer")
@@ -173,7 +182,7 @@ mod tests {
                     .child(
                         LayoutBox::new(Axis::Vertical)
                             .mark("deco")
-                            .style(Style::new().with_padding(Quad::square(Mm(4.0))))
+                            .style(StyleBuilder::new().with_padding(Quad::square(Mm(4.0))))
                             .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
                     .child(DefaultFactory::vfill().grow(1)),
@@ -204,8 +213,11 @@ mod tests {
         )
         .with_debug_frame(true);
 
-        let style =
-            Style::default().with_font(Font::new("LatoReg", Pt(10.0), Some(Features::default())));
+        let style = StyleBuilder::default().with_font(Font::new(
+            "LatoReg",
+            Pt(10.0),
+            Some(Features::default()),
+        ));
 
         let outer = DefaultFactory::hbox()
             .mark("outer")
@@ -220,7 +232,7 @@ mod tests {
                         LayoutBox::new(Axis::Vertical)
                             .mark("deco")
                             .style(
-                                Style::new()
+                                StyleBuilder::new()
                                     .with_border(Border::h(Stroke::new(
                                         Rgba::from((135, 235, 64, 0.0)),
                                         Pt(1.0),
