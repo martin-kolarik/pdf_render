@@ -39,8 +39,11 @@ impl Renderer {
     }
 
     pub fn render(mut self, mut layout: Box<dyn Layout>) -> Result<Vec<u8>, Error> {
+        // log::error!("INPUT\n{:#?}", layout);
         layout.measure(&mut self.context, self.content_size.clone())?;
+        // log::error!("MEASURED\n{:#?}", layout);
         layout.lay_out(&mut self.context, Offset::zero(), self.content_size.clone())?;
+        // log::error!("LAYED OUT\n{:#?}", layout);
 
         self.context.complete_fonts()?;
         layout.render(&mut self.context)?;
@@ -92,9 +95,9 @@ mod tests {
 
         let outer = DefaultFactory::hbox()
             .size(Mm(190.0))
-            .child(DefaultFactory::hfill().grow(2))
+            .child(DefaultFactory::hfill(2))
             .child(Text::new("Žáňa Nováková jr.").style(style))
-            .child(DefaultFactory::hfill().grow(1));
+            .child(DefaultFactory::hfill(1));
 
         let pdf = renderer.render(Box::new(outer)).unwrap();
 
@@ -129,16 +132,16 @@ mod tests {
         let outer = DefaultFactory::hbox()
             .mark("1")
             .size(Mm(190.0))
-            .child(DefaultFactory::hfill().mark("2").grow(2))
+            .child(DefaultFactory::hfill(2).mark("2"))
             .child(
                 DefaultFactory::vbox()
                     .mark("3")
                     .size(Mm(277.0))
-                    .child(DefaultFactory::vfill().grow(1).mark("4"))
+                    .child(DefaultFactory::vfill(1).mark("4"))
                     .child(Text::new("Žáňa Nováková jr.").mark("5").style(style))
-                    .child(DefaultFactory::vfill().grow(1).mark("6")),
+                    .child(DefaultFactory::vfill(1).mark("6")),
             )
-            .child(DefaultFactory::hfill().grow(1).mark("7"));
+            .child(DefaultFactory::hfill(1).mark("7"));
 
         let pdf = renderer.render(Box::new(outer)).unwrap();
 
@@ -173,21 +176,21 @@ mod tests {
         let outer = DefaultFactory::hbox()
             .mark("outer")
             .size(Mm(190.0))
-            .child(DefaultFactory::hfill().grow(2))
+            .child(DefaultFactory::hfill(2))
             .child(
                 DefaultFactory::vbox()
                     .mark("inner")
                     .size(Mm(277.0))
-                    .child(DefaultFactory::vfill().grow(1))
+                    .child(DefaultFactory::vfill(1))
                     .child(
                         LayoutBox::new(Axis::Vertical)
                             .mark("deco")
                             .style(StyleBuilder::new().with_padding(Quad::square(Mm(4.0))))
                             .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
-                    .child(DefaultFactory::vfill().grow(1)),
+                    .child(DefaultFactory::vfill(1)),
             )
-            .child(DefaultFactory::hfill().grow(1));
+            .child(DefaultFactory::hfill(1));
 
         let pdf = renderer.render(Box::new(outer)).unwrap();
 
@@ -222,12 +225,12 @@ mod tests {
         let outer = DefaultFactory::hbox()
             .mark("outer")
             .size(Mm(190.0))
-            .child(DefaultFactory::hfill().grow(2))
+            .child(DefaultFactory::hfill(2))
             .child(
                 DefaultFactory::vbox()
                     .mark("inner")
                     .size(Mm(277.0))
-                    .child(DefaultFactory::vfill().grow(1))
+                    .child(DefaultFactory::vfill(1))
                     .child(
                         LayoutBox::new(Axis::Vertical)
                             .mark("deco")
@@ -241,9 +244,9 @@ mod tests {
                             )
                             .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
-                    .child(DefaultFactory::vfill().grow(1)),
+                    .child(DefaultFactory::vfill(1)),
             )
-            .child(DefaultFactory::hfill().grow(1));
+            .child(DefaultFactory::hfill(1));
 
         let pdf = renderer.render(Box::new(outer)).unwrap();
 
