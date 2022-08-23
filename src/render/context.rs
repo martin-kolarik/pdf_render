@@ -318,6 +318,9 @@ impl layout::RenderContext for RenderContext {
             Some(font) => font.clone(),
             None => return,
         };
+        if text.positions.is_empty() {
+            return;
+        }
 
         self.check_page_break(content_position.y(), text.height * font.size());
 
