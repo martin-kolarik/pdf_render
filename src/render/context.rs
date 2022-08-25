@@ -231,21 +231,17 @@ impl layout::MeasureContext for RenderContext {
         self.style.as_ref()
     }
 
-    fn typeset(
-        &mut self,
-        style: &Style,
-        text: &str,
-        features: Option<&Features>,
-    ) -> Result<TextPosition, Error> {
-        let font = match style.font().or_else(|| self.style.font()) {
-            Some(font) => font,
-            None => return Err(Error::UnknownFont("<unspecified>".into())),
-        };
-        self.fonts.typeset(
-            font.name(),
-            text,
-            features.unwrap_or_else(|| font.features()),
-        )
+    fn typeset(&mut self, style: &Style, text: &str) -> Result<TextPosition, Error> {
+        let font = style.font().merge(self.style.font());
+        if font.name().is_none() || font.size().is_none() {
+            Err(Error::UnknownFont("Font name or size is undefined".into()))
+        } else {
+            self.fonts.typeset(
+                font.name().unwrap(),
+                text,
+                &font.features().cloned().unwrap_or_default(),
+            )
+        }
     }
 }
 
@@ -314,43 +310,46 @@ impl layout::RenderContext for RenderContext {
         text: &TextPosition,
         position_is_baseline: bool,
     ) {
-        let font = match style.font().or_else(|| self.style.font()) {
-            Some(font) => font.clone(),
-            None => return,
-        };
         if text.positions.is_empty() {
             return;
         }
 
-        self.check_page_break(content_position.y(), text.height * font.size());
+        let font = style.font().merge(self.style.font());
+        if font.name().is_none() || font.size().is_none() {
+            log::warn!("Try to typeset text without defined font");
+            return;
+        }
+        let font_size = font.size().unwrap();
+
+        self.check_page_break(content_position.y(), text.height * font_size);
 
         let content_position = self.page_content_offset(content_position);
         let mut page_position = self.page_margin.offset(&content_position);
         if !position_is_baseline {
-            page_position.y_advance(text.ascent() * font.size());
+            page_position.y_advance(text.ascent() * font.size().unwrap());
         }
         let page_position = self.swap_y(&page_position);
 
-        let font_ref = self.fonts.get_font_ref(font.name()).unwrap();
+        let font_ref = self.fonts.get_font_ref(font.name().unwrap()).unwrap();
 
         let layer = &self.layer;
         layer.begin_text_section();
-        layer.set_font(font_ref, *font.size());
+        layer.set_font(font_ref, *font.size().unwrap());
         layer.set_text_cursor(from_unit(page_position.x()), from_unit(page_position.y()));
 
         for position in text.positions.iter() {
             let h_offset = position.h_offset();
             let v_offset = position.v_offset();
             if !h_offset.is_zero() || !v_offset.is_zero() {
-                let h_offset = h_offset * font.size();
-                let v_offset = v_offset * font.size();
+                let h_offset = h_offset * font_size;
+                let v_offset = v_offset * font_size;
                 layer.set_text_cursor(from_pt(h_offset), from_pt(v_offset));
             }
 
             layer.write_codepoints([position.glyph_index()]);
 
-            let h_advance = position.h_advance_rest() * font.size();
-            let v_advance = position.v_advance_rest() * font.size();
+            let h_advance = position.h_advance_rest() * font_size;
+            let v_advance = position.v_advance_rest() * font_size;
 
             layer.set_text_cursor(from_pt(h_advance), from_pt(v_advance));
         }
@@ -405,15 +404,19 @@ mod tests {
             .build();
 
         let text1 = rctx
-            .typeset(&style, "Fimfifárumík 12115 jgenealogie", None)
+            .typeset(&style, "Fimfifárumík 12115 jgenealogie")
             .unwrap();
 
+        let style = StyleBuilder::default()
+            .with_font(Font::new(
+                "LatoReg",
+                Pt(36.0),
+                Some(Features::empty().tnum().smcp()),
+            ))
+            .build();
+
         let text2 = rctx
-            .typeset(
-                &style,
-                "Fimfifárumík 12115 jgenealogie",
-                Some(&Features::empty().smcp().tnum()),
-            )
+            .typeset(&style, "Fimfifárumík 12115 jgenealogie")
             .unwrap();
 
         rctx.complete_fonts().unwrap();
