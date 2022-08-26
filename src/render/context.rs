@@ -4,7 +4,7 @@ use indexmap::IndexSet;
 use layout::{
     position::{Offset, Quad, Size},
     unit::Unit,
-    Error, Features, RenderContext as _, Rgba, Stroke, Style, TextPosition,
+    Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
 };
 use printpdf::{
     IndirectFontRef, Line, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
@@ -180,23 +180,48 @@ impl RenderContext {
         )
     }
 
+    fn new_page_internal(&mut self, margin: Option<&Quad>, size: Option<&Size>) {
+        if let Some(margin) = margin {
+            self.page_margin = margin.clone();
+        }
+        if let Some(size) = size {
+            self.page_size = size.clone();
+        }
+
+        self.page_start = None;
+        self.page_end = None;
+
+        let (page, layer) = self.document.add_page(
+            from_unit(self.page_size.width()),
+            from_unit(self.page_size.height()),
+            "default",
+        );
+
+        self.page = self.document.get_page(page);
+        self.layer = self.page.get_layer(layer);
+    }
+
     fn check_page_break(
         &mut self,
         content_offset: impl Into<Unit>,
         content_height: impl Into<Unit>,
-    ) {
+    ) -> bool {
         let content_offset = content_offset.into();
         let content_height = content_height.into();
 
+        let mut new_page = false;
         if let Some(page_end) = &self.page_end {
             if content_offset + content_height >= page_end.y() {
-                self.new_page();
+                self.new_page_internal(None, None);
+                new_page = true;
             }
         }
 
         if self.page_start.is_none() {
             self.set_page_offsets(content_offset);
         }
+
+        new_page
     }
 
     fn set_page_offsets(&mut self, content_offset: Unit) {
@@ -246,24 +271,19 @@ impl layout::MeasureContext for RenderContext {
 }
 
 impl layout::RenderContext for RenderContext {
-    fn new_page(&mut self) {
-        self.page_start = None;
-        self.page_end = None;
-
-        let (page, layer) = self.document.add_page(
-            from_unit(self.page_size.width()),
-            from_unit(self.page_size.height()),
-            "default",
-        );
-
-        self.page = self.document.get_page(page);
-        self.layer = self.page.get_layer(layer);
-    }
-
-    fn new_page_size(&mut self, margin: Quad, size: Size) {
-        self.page_margin = margin;
-        self.page_size = size;
-        self.new_page();
+    fn new_page(&mut self, options: Option<NewPageOptions>) -> bool {
+        if let Some(must_be_in_page) = options
+            .as_ref()
+            .and_then(|options| options.must_be_in_page())
+        {
+            self.check_page_break(must_be_in_page.0, must_be_in_page.1)
+        } else {
+            self.new_page_internal(
+                options.as_ref().and_then(|options| options.margin()),
+                options.as_ref().and_then(|options| options.size()),
+            );
+            true
+        }
     }
 
     fn debug_frame(&self, content_position: &Offset, size: &Size) {
