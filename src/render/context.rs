@@ -86,7 +86,11 @@ impl RenderFonts {
                 None => continue,
             };
             let reader = std::io::Cursor::new(subsetted_font);
-            render_font.font_ref = Some(document.add_external_font(reader)?);
+            render_font.font_ref = Some(
+                document
+                    .add_external_font(reader)
+                    .map_err(|error| Error::PdfWrite(error.to_string()))?,
+            );
         }
 
         Ok(())
@@ -163,7 +167,9 @@ impl RenderContext {
     }
 
     pub fn save_to_bytes(self) -> Result<Vec<u8>, Error> {
-        Ok(self.document.save_to_bytes()?)
+        self.document
+            .save_to_bytes()
+            .map_err(|error| Error::PdfWrite(error.to_string()))
     }
 
     fn page_content_offset(&self, content_offset: &Offset) -> Offset {

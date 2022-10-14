@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-layout = { path = "../layout" }
+layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.git" }
 
 allsorts = { version = "^0.11" }
 
