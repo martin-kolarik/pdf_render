@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.git" }
+layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.git", features = ["color", "layout"]}
 
 allsorts = { version = "^0.12" }
 
