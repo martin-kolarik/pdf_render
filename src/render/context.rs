@@ -217,7 +217,7 @@ impl RenderContext {
 
         let mut new_page = false;
         if let Some(page_end) = &self.page_end {
-            if content_offset + content_height >= page_end.y() {
+            if content_offset + content_height > page_end.y() {
                 self.new_page_internal(None, None);
                 new_page = true;
             }
