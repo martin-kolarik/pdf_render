@@ -39,11 +39,11 @@ impl Renderer {
     }
 
     pub fn render(mut self, mut layout: Box<dyn Layout>) -> Result<Vec<u8>, Error> {
-        // log::error!("INPUT\n{:#?}", layout);
+        log::error!("INPUT\n{:#?}", layout);
         layout.measure(&mut self.context, self.content_size.clone())?;
-        // log::error!("MEASURED\n{:#?}", layout);
+        log::error!("MEASURED\n{:#?}", layout);
         layout.lay_out(&mut self.context, Offset::zero(), self.content_size.clone())?;
-        // log::error!("LAYED OUT\n{:#?}", layout);
+        log::error!("LAYED OUT\n{:#?}", layout);
 
         self.context.complete_fonts()?;
         layout.render(&mut self.context)?;
