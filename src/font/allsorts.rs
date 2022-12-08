@@ -357,11 +357,11 @@ mod tests {
         for position in sh_positions.positions.iter() {
             let points = vec![
                 (
-                    Point::new(Mm(10.0) + Pt(hofs as f64 * 33.0).into(), Mm(100.0)),
+                    Point::new(Mm(10.0) + Pt(hofs * 33.0).into(), Mm(100.0)),
                     false,
                 ),
                 (
-                    Point::new(Mm(10.0) + Pt(hofs as f64 * 33.0).into(), Mm(90.0)),
+                    Point::new(Mm(10.0) + Pt(hofs * 33.0).into(), Mm(90.0)),
                     false,
                 ),
             ];
@@ -380,11 +380,11 @@ mod tests {
 
         let points = vec![
             (
-                Point::new(Mm(10.0) + Pt(hofs as f64 * 33.0).into(), Mm(100.0)),
+                Point::new(Mm(10.0) + Pt(hofs * 33.0).into(), Mm(100.0)),
                 false,
             ),
             (
-                Point::new(Mm(10.0) + Pt(hofs as f64 * 33.0).into(), Mm(90.0)),
+                Point::new(Mm(10.0) + Pt(hofs * 33.0).into(), Mm(90.0)),
                 false,
             ),
         ];

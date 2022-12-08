@@ -149,7 +149,7 @@ impl RenderContext {
             page_size: size,
             page_start: None,
             page_end: None,
-            style: Style::default(),
+            style: Style::new_default(),
             debug_frame: false,
         };
         render_context.set_page_offsets(Unit::from(0));
