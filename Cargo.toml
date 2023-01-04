@@ -4,11 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.git", features = ["color", "layout"]}
+layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.git", features = [
+    "color",
+    "layout",
+] }
 
-allsorts = { version = "^0.12" }
+allsorts = { version = "^0.13" }
 
-indexmap = { version = "^1.8" }
-log = { version = "^0.4", default-features = false }
+indexmap = { version = "^1.9" }
+tracing = { version = "^0.1", default-features = false, features = ["std"] }
 ouroboros = { version = "0.15" }
 printpdf = { version = "^0.5" }

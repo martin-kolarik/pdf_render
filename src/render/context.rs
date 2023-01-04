@@ -342,7 +342,7 @@ impl layout::RenderContext for RenderContext {
 
         let font = style.font().merge(self.style.font());
         if font.name().is_none() || font.size().is_none() {
-            log::warn!("Try to typeset text without defined font");
+            tracing::warn!("Try to typeset text without defined font");
             return;
         }
         let font_size = font.size().unwrap();
