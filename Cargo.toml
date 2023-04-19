@@ -9,7 +9,9 @@ layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.g
     "layout",
 ] }
 
-allsorts = { version = "^0.14" }
+allsorts = { version = "^0.14", default-features = false, features = [
+    "flate2_zlib",
+] }
 
 indexmap = { version = "^1.9" }
 tracing = { version = "^0.1", default-features = false, features = ["std"] }
