@@ -155,7 +155,7 @@ impl Font {
     ) -> Result<TextPosition, Error> {
         let features = features.into();
 
-        let glyphs = font.map_glyphs(text.borrow(), tag::LATN, MatchingPresentation::NotRequired);
+        let glyphs = font.map_glyphs(text, tag::LATN, MatchingPresentation::NotRequired);
 
         let shapes = font
             .shape(glyphs, tag::LATN, None, &features, true)
