@@ -10,11 +10,11 @@ use printpdf::Color;
 pub use renderer::*;
 
 fn from_unit(unit: Unit) -> printpdf::Mm {
-    printpdf::Mm(Mm::from(unit).0)
+    printpdf::Mm(Mm::from(unit).0 as f32)
 }
 
 fn from_pt(pt: Pt) -> printpdf::Mm {
-    printpdf::Mm(Mm::from(pt).0)
+    printpdf::Mm(Mm::from(pt).0 as f32)
 }
 
 fn from_rgba(color: &Rgba) -> Color {

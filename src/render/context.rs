@@ -7,8 +7,8 @@ use layout::{
     Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
 };
 use printpdf::{
-    IndirectFontRef, Line, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
-    PdfPageReference, Point,
+    IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
+    PdfPageReference, Point, Polygon, PolygonMode,
 };
 
 use crate::font::Fonts;
@@ -250,10 +250,10 @@ impl RenderContext {
             )
         });
 
-        let mut line = Line::from_iter(line_points);
-        line.set_stroke(true);
+        let mut polygon = Polygon::from_iter(line_points);
+        polygon.mode = PolygonMode::Stroke;
 
-        self.layer.add_shape(line);
+        self.layer.add_polygon(polygon);
     }
 }
 
@@ -324,7 +324,8 @@ impl layout::RenderContext for RenderContext {
         let to = self.page_margin.offset(&to);
 
         self.layer.set_outline_color(from_rgba(stroke.color()));
-        self.layer.set_outline_thickness(stroke.thickness().0);
+        self.layer
+            .set_outline_thickness(stroke.thickness().0 as f32);
 
         self.line_inner(&[&from, &to]);
     }
@@ -360,7 +361,7 @@ impl layout::RenderContext for RenderContext {
 
         let layer = &self.layer;
         layer.begin_text_section();
-        layer.set_font(font_ref, *font.size().unwrap());
+        layer.set_font(font_ref, *font.size().unwrap() as f32);
         layer.set_text_cursor(from_unit(page_position.x()), from_unit(page_position.y()));
 
         for position in text.positions.iter() {

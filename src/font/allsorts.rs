@@ -267,7 +267,7 @@ mod tests {
 
     use indexmap::IndexSet;
     use layout::Features;
-    use printpdf::{Color, Line, Mm, PdfDocument, Point, Pt, Rgb};
+    use printpdf::{Color, Line, Mm, PdfDocument, Point, Polygon, PolygonMode, Pt, Rgb};
 
     use crate::FontSources;
 
@@ -331,19 +331,19 @@ mod tests {
         for position in sh_positions.positions.iter() {
             if position.h_offset().0 != 0.0 || position.v_offset().0 != 0.0 {
                 current_layer.set_text_cursor(
-                    Pt(position.h_offset().0 * 33.0).into(),
-                    Pt(position.v_offset().0 * 33.0).into(),
+                    Pt((position.h_offset().0 * 33.0) as f32).into(),
+                    Pt((position.v_offset().0 * 33.0) as f32).into(),
                 );
             }
 
             current_layer.write_codepoints([position.glyph_index()]);
 
             current_layer.set_text_cursor(
-                Pt((position.h_advance().0 - position.h_offset().0) * 33.0).into(),
+                Pt(((position.h_advance().0 - position.h_offset().0) * 33.0) as f32).into(),
                 Pt(if position.v_offset().0.abs() == 0.0 {
                     0.0
                 } else {
-                    -position.v_offset().0 * 33.0
+                    -(position.v_offset().0 * 33.0) as f32
                 })
                 .into(),
             );
@@ -366,16 +366,11 @@ mod tests {
                 ),
             ];
 
-            let line = Line {
-                points,
-                is_closed: false,
-                has_fill: false,
-                has_stroke: true,
-                is_clipping_path: false,
-            };
-            current_layer.add_shape(line);
+            let mut polygon = Polygon::from_iter(points);
+            polygon.mode = PolygonMode::Stroke;
+            current_layer.add_polygon(polygon);
 
-            hofs += position.h_advance().0;
+            hofs += position.h_advance().0 as f32;
         }
 
         let points = vec![
@@ -389,66 +384,53 @@ mod tests {
             ),
         ];
 
-        let line = Line {
-            points,
-            is_closed: false,
-            has_fill: false,
-            has_stroke: true,
-            is_clipping_path: false,
-        };
-        current_layer.add_shape(line);
+        let mut polygon = Polygon::from_iter(points);
+        polygon.mode = PolygonMode::Stroke;
+        current_layer.add_polygon(polygon);
 
         let points = vec![
             (
                 Point::new(
                     Mm(10.0),
-                    Mm(100.0) + Pt((sh_positions.height.0 - sh_positions.depth.0) * 33.0).into(),
+                    Mm(100.0)
+                        + Pt(((sh_positions.height.0 - sh_positions.depth.0) * 33.0) as f32).into(),
                 ),
                 false,
             ),
             (
                 Point::new(
                     Mm(50.0),
-                    Mm(100.0) + Pt((sh_positions.height.0 - sh_positions.depth.0) * 33.0).into(),
+                    Mm(100.0)
+                        + Pt(((sh_positions.height.0 - sh_positions.depth.0) * 33.0) as f32).into(),
                 ),
                 false,
             ),
         ];
 
-        let line = Line {
-            points,
-            is_closed: false,
-            has_fill: false,
-            has_stroke: true,
-            is_clipping_path: false,
-        };
-        current_layer.add_shape(line);
+        let mut polygon = Polygon::from_iter(points);
+        polygon.mode = PolygonMode::Stroke;
+        current_layer.add_polygon(polygon);
 
         let points = vec![
             (
                 Point::new(
                     Mm(10.0),
-                    Mm(100.0) - Pt((sh_positions.depth.0) * 33.0).into(),
+                    Mm(100.0) - Pt(((sh_positions.depth.0) * 33.0) as f32).into(),
                 ),
                 false,
             ),
             (
                 Point::new(
                     Mm(50.0),
-                    Mm(100.0) - Pt((sh_positions.depth.0) * 33.0).into(),
+                    Mm(100.0) - Pt(((sh_positions.depth.0) * 33.0) as f32).into(),
                 ),
                 false,
             ),
         ];
 
-        let line = Line {
-            points,
-            is_closed: false,
-            has_fill: false,
-            has_stroke: true,
-            is_clipping_path: false,
-        };
-        current_layer.add_shape(line);
+        let mut polygon = Polygon::from_iter(points);
+        polygon.mode = PolygonMode::Stroke;
+        current_layer.add_polygon(polygon);
 
         doc.save(&mut BufWriter::new(
             File::create("test_fonts_a.pdf").unwrap(),
