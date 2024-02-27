@@ -7,8 +7,8 @@ use layout::{
     Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
 };
 use printpdf::{
-    IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
-    PdfPageReference, Point, Polygon, PolygonMode,
+    path::PaintMode, IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference,
+    PdfPageIndex, PdfPageReference, Point, Polygon,
 };
 
 use crate::font::Fonts;
@@ -251,7 +251,7 @@ impl RenderContext {
         });
 
         let mut polygon = Polygon::from_iter(line_points);
-        polygon.mode = PolygonMode::Stroke;
+        polygon.mode = PaintMode::Stroke;
 
         self.layer.add_polygon(polygon);
     }
