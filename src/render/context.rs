@@ -3,7 +3,7 @@ use std::{borrow::Borrow, sync::Arc};
 use indexmap::IndexSet;
 use layout::{
     position::{Offset, Quad, Size},
-    unit::Unit,
+    unit::{FillPerMille, Unit},
     Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
 };
 use printpdf::{
@@ -347,6 +347,11 @@ impl layout::RenderContext for RenderContext {
             return;
         }
         let font_size = font.size().unwrap();
+        let font_scaling = font
+            .scaling()
+            .as_ref()
+            .map(FillPerMille::scaling)
+            .unwrap_or(1.0);
 
         self.check_page_break(content_position.y(), text.height * font_size);
 
@@ -363,25 +368,27 @@ impl layout::RenderContext for RenderContext {
         layer.begin_text_section();
         layer.set_font(font_ref, *font.size().unwrap() as f32);
         layer.set_text_cursor(from_unit(page_position.x()), from_unit(page_position.y()));
+        layer.set_text_scaling(100.0 * font_scaling as f32);
 
         for position in text.positions.iter() {
             let h_offset = position.h_offset();
             let v_offset = position.v_offset();
             if !h_offset.is_zero() || !v_offset.is_zero() {
-                let h_offset = h_offset * font_size;
+                let h_offset = h_offset * font_size * font_scaling;
                 let v_offset = v_offset * font_size;
                 layer.set_text_cursor(from_pt(h_offset), from_pt(v_offset));
             }
 
             layer.write_codepoints([position.glyph_index()]);
 
-            let h_advance = position.h_advance_rest() * font_size;
+            let h_advance = position.h_advance_rest() * font_size * font_scaling;
             let v_advance = position.v_advance_rest() * font_size;
 
             layer.set_text_cursor(from_pt(h_advance), from_pt(v_advance));
         }
 
-        self.layer.end_text_section();
+        layer.set_text_scaling(100.0);
+        layer.end_text_section();
     }
 }
 
