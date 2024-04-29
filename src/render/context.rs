@@ -180,10 +180,7 @@ impl RenderContext {
     }
 
     fn swap_y(&self, page_position: &Offset) -> Offset {
-        Offset::new(
-            page_position.x(),
-            self.page_size.height() - page_position.y(),
-        )
+        Offset::new(page_position.x, self.page_size.height() - page_position.y)
     }
 
     fn new_page_internal(&mut self, margin: Option<&Quad>, size: Option<&Size>) {
@@ -217,7 +214,7 @@ impl RenderContext {
 
         let mut new_page = false;
         if let Some(page_end) = &self.page_end {
-            if content_offset + content_height > page_end.y() {
+            if content_offset + content_height > page_end.y {
                 self.new_page_internal(None, None);
                 new_page = true;
             }
@@ -245,7 +242,7 @@ impl RenderContext {
         let line_points = content_points.iter().map(|point| {
             let position = self.swap_y(point);
             (
-                Point::new(from_unit(position.x()), from_unit(position.y())),
+                Point::new(from_unit(position.x), from_unit(position.y)),
                 false,
             )
         });
@@ -300,9 +297,9 @@ impl layout::RenderContext for RenderContext {
 
             let points = [
                 &top_left,
-                &Offset::new(bottom_right.x(), top_left.y()),
+                &Offset::new(bottom_right.x, top_left.y),
                 &bottom_right,
-                &Offset::new(top_left.x(), bottom_right.y()),
+                &Offset::new(top_left.x, bottom_right.y),
                 &top_left,
             ];
 
@@ -315,7 +312,7 @@ impl layout::RenderContext for RenderContext {
     }
 
     fn line(&mut self, from: &Offset, to: &Offset, stroke: &Stroke) {
-        self.check_page_break(from.y(), 0);
+        self.check_page_break(from.y, 0);
 
         let from = self.page_content_offset(from);
         let from = self.page_margin.offset(&from);
@@ -353,7 +350,7 @@ impl layout::RenderContext for RenderContext {
             .map(FillPerMille::scaling)
             .unwrap_or(1.0);
 
-        self.check_page_break(content_position.y(), text.height * font_size);
+        self.check_page_break(content_position.y, text.height * font_size);
 
         let content_position = self.page_content_offset(content_position);
         let mut page_position = self.page_margin.offset(&content_position);
@@ -367,7 +364,7 @@ impl layout::RenderContext for RenderContext {
         let layer = &self.layer;
         layer.begin_text_section();
         layer.set_font(font_ref, *font.size().unwrap() as f32);
-        layer.set_text_cursor(from_unit(page_position.x()), from_unit(page_position.y()));
+        layer.set_text_cursor(from_unit(page_position.x), from_unit(page_position.y));
         layer.set_text_scaling(100.0 * font_scaling as f32);
 
         for position in text.positions.iter() {
