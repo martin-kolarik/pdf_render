@@ -158,7 +158,7 @@ impl Font {
         let glyphs = font.map_glyphs(text, tag::LATN, MatchingPresentation::NotRequired);
 
         let shapes = font
-            .shape(glyphs, tag::LATN, None, &features, true)
+            .shape(glyphs, tag::LATN, None, &features, None, true)
             .map_or_else(|(_, shapes)| shapes, |shapes| shapes);
 
         let positions = glyph_position::GlyphLayout::new(
@@ -256,7 +256,7 @@ impl CachedAllsortsFont {
             let scope = ReadScope::new(source);
             let font_data = scope.read::<FontData>()?;
             let provider = font_data.table_provider(NON_TTC_TABLE)?;
-            allsorts::Font::new(provider)?.ok_or_else(|| Error::MalformedFont(name.to_owned()))
+            allsorts::Font::new(provider).map_err(|_| Error::MalformedFont(name.to_owned()))
         })
     }
 }
