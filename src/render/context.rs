@@ -1,6 +1,5 @@
 use std::{borrow::Borrow, sync::Arc};
 
-use indexmap::IndexSet;
 use layout::{
     position::{Offset, Quad, Size},
     unit::{FillPerMille, Unit},
@@ -10,6 +9,7 @@ use printpdf::{
     path::PaintMode, IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference,
     PdfPageIndex, PdfPageReference, Point, Polygon,
 };
+use rtext::index_set::{self, IndexSet};
 
 use crate::font::Fonts;
 
@@ -23,7 +23,7 @@ struct RenderFont {
 
 impl RenderFont {
     fn new(name: impl Into<String>) -> Self {
-        let mut collector = IndexSet::new();
+        let mut collector = index_set::new();
         collector.insert(0);
 
         Self {

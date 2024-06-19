@@ -4,16 +4,14 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+allsorts = { version = "^0.15", default-features = false, features = [
+    "flate2_zlib",
+] }
 layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.git", features = [
     "color",
     "layout",
 ] }
-
-allsorts = { version = "^0.15", default-features = false, features = [
-    "flate2_zlib",
-] }
-
-indexmap = { version = "^2.0" }
-tracing = { version = "^0.1", default-features = false, features = ["std"] }
 ouroboros = { version = "^0.18" }
 printpdf = { version = "^0.7" }
+rtext = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/rtext.git" }
+tracing = { version = "^0.1", default-features = false, features = ["std"] }

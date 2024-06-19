@@ -6,12 +6,14 @@ use allsorts::{
     subset::subset,
     tag,
 };
-use indexmap::IndexSet;
 use layout::{unit::Em, Error, Features, GlyphPosition, TextPosition};
 use ouroboros::self_referencing;
+use rtext::{
+    hash_map::{self, HashMap},
+    index_set::IndexSet,
+};
 use std::{
     borrow::{Borrow, Cow},
-    collections::HashMap,
     sync::{Arc, Mutex, RwLock},
 };
 
@@ -27,7 +29,7 @@ pub struct FontSources {
 impl FontSources {
     pub fn new() -> Self {
         Self {
-            data: Arc::new(RwLock::new(HashMap::new())),
+            data: Arc::new(RwLock::new(hash_map::new())),
         }
     }
 
@@ -81,7 +83,7 @@ impl Fonts {
     pub fn new(sources: FontSources) -> Self {
         Self {
             sources,
-            data: Arc::new(RwLock::new(HashMap::new())),
+            data: Arc::new(RwLock::new(hash_map::new())),
         }
     }
 
