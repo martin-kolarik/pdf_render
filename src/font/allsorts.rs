@@ -267,9 +267,9 @@ impl CachedAllsortsFont {
 mod tests {
     use std::{fs::File, io::BufWriter};
 
-    use indexmap::IndexSet;
     use layout::Features;
-    use printpdf::{Color, Line, Mm, PdfDocument, Point, Polygon, PolygonMode, Pt, Rgb};
+    use printpdf::{path::PaintMode, Color, Mm, PdfDocument, Point, Polygon, Pt, Rgb};
+    use rtext::index_set;
 
     use crate::FontSources;
 
@@ -309,7 +309,7 @@ mod tests {
 
         let sh_font = sh_fonts.get("LatoReg").unwrap();
 
-        let mut collector = IndexSet::<u16>::new();
+        let mut collector = index_set::new::<u16>();
         collector.insert(0);
 
         let sh_positions = sh_font
@@ -369,7 +369,7 @@ mod tests {
             ];
 
             let mut polygon = Polygon::from_iter(points);
-            polygon.mode = PolygonMode::Stroke;
+            polygon.mode = PaintMode::Stroke;
             current_layer.add_polygon(polygon);
 
             hofs += position.h_advance().0 as f32;
@@ -387,7 +387,7 @@ mod tests {
         ];
 
         let mut polygon = Polygon::from_iter(points);
-        polygon.mode = PolygonMode::Stroke;
+        polygon.mode = PaintMode::Stroke;
         current_layer.add_polygon(polygon);
 
         let points = vec![
@@ -410,7 +410,7 @@ mod tests {
         ];
 
         let mut polygon = Polygon::from_iter(points);
-        polygon.mode = PolygonMode::Stroke;
+        polygon.mode = PaintMode::Stroke;
         current_layer.add_polygon(polygon);
 
         let points = vec![
@@ -431,7 +431,7 @@ mod tests {
         ];
 
         let mut polygon = Polygon::from_iter(points);
-        polygon.mode = PolygonMode::Stroke;
+        polygon.mode = PaintMode::Stroke;
         current_layer.add_polygon(polygon);
 
         doc.save(&mut BufWriter::new(
