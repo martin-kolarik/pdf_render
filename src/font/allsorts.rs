@@ -6,7 +6,7 @@ use allsorts::{
     subset::subset,
     tag,
 };
-use layout::{unit::Em, Error, Features, GlyphPosition, TextPosition};
+use layout::{Error, Features, GlyphPosition, TextPosition, unit::Em};
 use ouroboros::self_referencing;
 use rtext::{
     hash_map::{self, HashMap},
@@ -267,8 +267,11 @@ impl CachedAllsortsFont {
 mod tests {
     use std::{fs::File, io::BufWriter};
 
-    use layout::Features;
-    use printpdf::{path::PaintMode, Color, Mm, PdfDocument, Point, Polygon, Pt, Rgb};
+    use layout::{Features, TextPosition};
+    use printpdf::{
+        Color, FontId, Mm, Op, PaintMode, ParsedFont, PdfDocument, PdfPage, PdfSaveOptions, Point,
+        Polygon, Pt, Rgb, TextItem,
+    };
     use rtext::index_set;
 
     use crate::FontSources;
@@ -276,37 +279,57 @@ mod tests {
     use super::Fonts;
 
     #[test]
-    fn render() {
-        let (doc, page1, layer1) =
-            PdfDocument::new("PDF_Document_title", Mm(500.0), Mm(300.0), "Layer 1");
-        let current_layer = doc.get_page(page1).get_layer(layer1);
+    fn render_v8_no_subsetting() {
+        let mut doc = PdfDocument::new("PDF_Document_title");
+
+        let mut wrns = vec![];
 
         let bin_font = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-
-        // text fill color = blue
-        let blue = Rgb::new(13.0 / 256.0, 71.0 / 256.0, 161.0 / 256.0, None);
-        let orange = Rgb::new(244.0 / 256.0, 67.0 / 256.0, 54.0 / 256.0, None);
-        current_layer.set_fill_color(Color::Rgb(blue));
-        current_layer.set_outline_color(Color::Rgb(orange));
-
-        // For more complex layout of text, you can use functions
-        // defined on the PdfLayerReference
-        // Make sure to wrap your commands
-        // in a `begin_text_section()` and `end_text_section()` wrapper
-        current_layer.begin_text_section();
-
-        // setup the general fonts.
-        // see the docs for these functions for details
-        current_layer.set_text_cursor(Mm(10.0), Mm(100.0));
-        current_layer.set_line_height(33.0);
-        // current_layer.set_word_spacing(3000.0);
-        // current_layer.set_character_spacing(0.0);
 
         let mut sh_sources = FontSources::new();
         sh_sources.add("LatoReg", bin_font).unwrap();
 
         let sh_fonts = Fonts::new(sh_sources);
+        let sh_font = sh_fonts.get("LatoReg").unwrap();
 
+        let sh_positions = sh_font
+            .typeset("Ťg AVA AA ě Tě 012 afa afia", &Features::empty())
+            .unwrap();
+
+        let parsed_font = ParsedFont::from_bytes(&bin_font, 0, &mut wrns).unwrap();
+        let font = doc.add_font(&parsed_font);
+
+        let mut ops = render_text(&font, &sh_positions);
+
+        ops.extend(render_frames(&sh_positions));
+
+        let options = PdfSaveOptions {
+            optimize: false,
+            subset_fonts: false,
+            ..Default::default()
+        };
+
+        doc.with_pages(vec![PdfPage::new(Mm(500.0), Mm(300.0), ops)])
+            .save_writer(
+                &mut BufWriter::new(File::create("test_fonts_a_v8_full.pdf").unwrap()),
+                &options,
+                &mut wrns,
+            );
+
+        eprintln!("Warnings: {:?}", wrns);
+    }
+
+    #[test]
+    fn render_v8_with_subsetting() {
+        let mut doc = PdfDocument::new("v8 with subsetting");
+        let mut wrns = vec![];
+
+        let bin_font = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
+
+        let mut sh_sources = FontSources::new();
+        sh_sources.add("LatoReg", bin_font).unwrap();
+
+        let sh_fonts = Fonts::new(sh_sources);
         let sh_font = sh_fonts.get("LatoReg").unwrap();
 
         let mut collector = index_set::new::<u16>();
@@ -326,34 +349,91 @@ mod tests {
             .subset(&collector)
             .unwrap()
             .unwrap();
-        let mut font_reader = std::io::Cursor::new(subsetted_font);
-        let sub_font = doc.add_external_font(&mut font_reader).unwrap();
-        current_layer.set_font(&sub_font, 33.0);
+
+        let parsed_font = ParsedFont::from_bytes(&subsetted_font, 0, &mut wrns).unwrap();
+        let font = doc.add_font(&parsed_font);
+
+        let mut ops = render_text(&font, &sh_positions);
+
+        ops.extend(render_frames(&sh_positions));
+
+        let options = PdfSaveOptions {
+            optimize: false,
+            subset_fonts: false,
+            ..Default::default()
+        };
+
+        doc.with_pages(vec![PdfPage::new(Mm(500.0), Mm(300.0), ops)])
+            .save_writer(
+                &mut BufWriter::new(File::create("test_fonts_a_v8_subset.pdf").unwrap()),
+                &options,
+                &mut wrns,
+            );
+
+        eprintln!("Warnings: {:?}", wrns);
+    }
+
+    fn render_text(font: &FontId, sh_positions: &TextPosition) -> Vec<Op> {
+        let mut ops = vec![
+            Op::StartTextSection,
+            Op::SetTextCursor {
+                pos: Point::new(Mm(10.0), Mm(100.0)),
+            },
+            Op::SetFontSize {
+                size: Pt(33.0),
+                font: font.clone(),
+            },
+            Op::SetLineHeight { lh: Pt(33.0) },
+        ];
 
         for position in sh_positions.positions.iter() {
             if position.h_offset().0 != 0.0 || position.v_offset().0 != 0.0 {
-                current_layer.set_text_cursor(
-                    Pt((position.h_offset().0 * 33.0) as f32).into(),
-                    Pt((position.v_offset().0 * 33.0) as f32).into(),
-                );
+                ops.push(Op::SetTextCursor {
+                    pos: Point::new(
+                        Pt((position.h_offset().0 * 33.0) as f32).into(),
+                        Pt((position.v_offset().0 * 33.0) as f32).into(),
+                    ),
+                });
             }
 
-            current_layer.write_codepoints([position.glyph_index()]);
+            eprint!("Cp: {:?}, ", position.glyph_index());
 
-            current_layer.set_text_cursor(
-                Pt(((position.h_advance().0 - position.h_offset().0) * 33.0) as f32).into(),
-                Pt(if position.v_offset().0.abs() == 0.0 {
-                    0.0
-                } else {
-                    -(position.v_offset().0 * 33.0) as f32
-                })
-                .into(),
-            );
+            ops.push(Op::WriteCodepoints {
+                font: font.clone(),
+                cp: vec![(position.glyph_index(), ' ')],
+            });
+
+            ops.push(Op::SetTextCursor {
+                pos: Point::new(
+                    Pt(((position.h_advance().0 - position.h_offset().0) * 33.0) as f32).into(),
+                    Pt(if position.v_offset().0.abs() == 0.0 {
+                        0.0
+                    } else {
+                        -(position.v_offset().0 * 33.0) as f32
+                    })
+                    .into(),
+                ),
+            });
         }
 
-        current_layer.end_text_section();
+        ops.push(Op::EndTextSection);
 
-        current_layer.set_outline_thickness(0.1);
+        ops
+    }
+
+    fn render_frames(sh_positions: &TextPosition) -> Vec<Op> {
+        let blue = Rgb::new(13.0 / 256.0, 71.0 / 256.0, 161.0 / 256.0, None);
+        let orange = Rgb::new(244.0 / 256.0, 67.0 / 256.0, 54.0 / 256.0, None);
+
+        let mut ops = vec![
+            Op::SetFillColor {
+                col: Color::Rgb(blue),
+            },
+            Op::SetOutlineColor {
+                col: Color::Rgb(orange),
+            },
+            Op::SetOutlineThickness { pt: Pt(0.1) },
+        ];
 
         let mut hofs = 0.0;
         for position in sh_positions.positions.iter() {
@@ -370,7 +450,7 @@ mod tests {
 
             let mut polygon = Polygon::from_iter(points);
             polygon.mode = PaintMode::Stroke;
-            current_layer.add_polygon(polygon);
+            ops.push(Op::DrawPolygon { polygon });
 
             hofs += position.h_advance().0 as f32;
         }
@@ -388,7 +468,7 @@ mod tests {
 
         let mut polygon = Polygon::from_iter(points);
         polygon.mode = PaintMode::Stroke;
-        current_layer.add_polygon(polygon);
+        ops.push(Op::DrawPolygon { polygon });
 
         let points = vec![
             (
@@ -411,7 +491,7 @@ mod tests {
 
         let mut polygon = Polygon::from_iter(points);
         polygon.mode = PaintMode::Stroke;
-        current_layer.add_polygon(polygon);
+        ops.push(Op::DrawPolygon { polygon });
 
         let points = vec![
             (
@@ -432,11 +512,8 @@ mod tests {
 
         let mut polygon = Polygon::from_iter(points);
         polygon.mode = PaintMode::Stroke;
-        current_layer.add_polygon(polygon);
+        ops.push(Op::DrawPolygon { polygon });
 
-        doc.save(&mut BufWriter::new(
-            File::create("test_fonts_a.pdf").unwrap(),
-        ))
-        .unwrap();
+        ops
     }
 }

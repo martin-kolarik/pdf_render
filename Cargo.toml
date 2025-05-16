@@ -12,6 +12,6 @@ layout = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/layout.g
     "layout",
 ] }
 ouroboros = { version = "^0.18" }
-printpdf = { version = "^0.7" }
+printpdf = { version = "^0.8", default-features = false }
 rtext = { git = "https://martinkolariknp@bitbucket.org/martinkolariknp/rtext.git" }
 tracing = { version = "^0.1", default-features = false, features = ["std"] }
