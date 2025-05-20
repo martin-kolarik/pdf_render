@@ -6,7 +6,7 @@ use allsorts::{
     subset::subset,
     tag,
 };
-use layout::{unit::Em, Error, Features, GlyphPosition, TextPosition};
+use layout::{Error, Features, GlyphPosition, TextPosition, unit::Em};
 use ouroboros::self_referencing;
 use rtext::{
     hash_map::{self, HashMap},
@@ -180,6 +180,7 @@ impl Font {
             .zip(positions.iter())
             .map(|(info, position)| {
                 GlyphPosition::new(
+                    info.glyph.unicodes.get(0).copied(),
                     info.glyph.glyph_index,
                     Em(position.hori_advance as f64 / units_per_em),
                     Em(position.vert_advance as f64 / units_per_em),
@@ -191,7 +192,7 @@ impl Font {
 
         let width = positions
             .iter()
-            .fold(Em(0.0), |sum, position| sum + position.h_advance());
+            .fold(Em(0.0), |sum, position| sum + position.h_advance);
 
         let depth = Em(descender);
         let height = Em(ascender + descender);
@@ -215,7 +216,7 @@ impl Font {
     {
         let mut positions = self.typeset(text, features)?;
         for glyph in positions.positions.iter_mut() {
-            glyph.set_glyph_index(glyph_collector.insert_full(glyph.glyph_index()).0 as u16);
+            glyph.set_glyph_index(glyph_collector.insert_full(glyph.glyph_index).0 as u16);
         }
         Ok(positions)
     }
@@ -268,7 +269,7 @@ mod tests {
     use std::{fs::File, io::BufWriter};
 
     use layout::Features;
-    use printpdf::{path::PaintMode, Color, Mm, PdfDocument, Point, Polygon, Pt, Rgb};
+    use printpdf::{Color, Mm, PdfDocument, Point, Polygon, Pt, Rgb, path::PaintMode};
     use rtext::index_set;
 
     use crate::FontSources;
@@ -331,21 +332,21 @@ mod tests {
         current_layer.set_font(&sub_font, 33.0);
 
         for position in sh_positions.positions.iter() {
-            if position.h_offset().0 != 0.0 || position.v_offset().0 != 0.0 {
+            if position.h_offset.0 != 0.0 || position.v_offset.0 != 0.0 {
                 current_layer.set_text_cursor(
-                    Pt((position.h_offset().0 * 33.0) as f32).into(),
-                    Pt((position.v_offset().0 * 33.0) as f32).into(),
+                    Pt((position.h_offset.0 * 33.0) as f32).into(),
+                    Pt((position.v_offset.0 * 33.0) as f32).into(),
                 );
             }
 
-            current_layer.write_codepoints([position.glyph_index()]);
+            current_layer.write_codepoints([position.glyph_index]);
 
             current_layer.set_text_cursor(
-                Pt(((position.h_advance().0 - position.h_offset().0) * 33.0) as f32).into(),
-                Pt(if position.v_offset().0.abs() == 0.0 {
+                Pt(((position.h_advance.0 - position.h_offset.0) * 33.0) as f32).into(),
+                Pt(if position.v_offset.0.abs() == 0.0 {
                     0.0
                 } else {
-                    -(position.v_offset().0 * 33.0) as f32
+                    -(position.v_offset.0 * 33.0) as f32
                 })
                 .into(),
             );
@@ -372,7 +373,7 @@ mod tests {
             polygon.mode = PaintMode::Stroke;
             current_layer.add_polygon(polygon);
 
-            hofs += position.h_advance().0 as f32;
+            hofs += position.h_advance.0 as f32;
         }
 
         let points = vec![

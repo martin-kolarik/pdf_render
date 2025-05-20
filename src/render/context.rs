@@ -1,13 +1,13 @@
 use std::{borrow::Borrow, sync::Arc};
 
 use layout::{
+    Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
     position::{Offset, Quad, Size},
     unit::{FillPerMille, Unit},
-    Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
 };
 use printpdf::{
-    path::PaintMode, IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference,
-    PdfPageIndex, PdfPageReference, Point, Polygon,
+    IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
+    PdfPageReference, Point, Polygon, path::PaintMode,
 };
 use rtext::index_set::{self, IndexSet};
 
@@ -289,7 +289,7 @@ impl layout::RenderContext for RenderContext {
         }
     }
 
-    fn debug_frame(&self, content_position: &Offset, size: &Size) {
+    fn debug_frame(&mut self, content_position: &Offset, size: &Size) {
         if self.debug_frame {
             let content_position = self.page_content_offset(content_position);
             let top_left = self.page_margin.offset(&content_position);
@@ -368,15 +368,15 @@ impl layout::RenderContext for RenderContext {
         layer.set_text_scaling(100.0 * font_scaling as f32);
 
         for position in text.positions.iter() {
-            let h_offset = position.h_offset();
-            let v_offset = position.v_offset();
+            let h_offset = position.h_offset;
+            let v_offset = position.v_offset;
             if !h_offset.is_zero() || !v_offset.is_zero() {
                 let h_offset = h_offset * font_size * font_scaling;
                 let v_offset = v_offset * font_size;
                 layer.set_text_cursor(from_pt(h_offset), from_pt(v_offset));
             }
 
-            layer.write_codepoints([position.glyph_index()]);
+            layer.write_codepoints([position.glyph_index]);
 
             let h_advance = position.h_advance_rest() * font_size * font_scaling;
             let v_advance = position.v_advance_rest() * font_size;
@@ -394,9 +394,9 @@ mod tests {
     use std::{fs::File, io::BufWriter};
 
     use layout::{
+        Features, Font, MeasureContext, RenderContext as _, StyleBuilder,
         position::{Offset, Quad, Size},
         unit::{Mm, Pt},
-        Features, Font, MeasureContext, RenderContext as _, StyleBuilder,
     };
     use printpdf::PdfDocument;
 
