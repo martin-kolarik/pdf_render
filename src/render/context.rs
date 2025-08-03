@@ -6,8 +6,8 @@ use layout::{
     unit::{FillPerMille, Unit},
 };
 use printpdf::{
-    IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
-    PdfPageReference, Point, Polygon, path::PaintMode,
+    Color, IndirectFontRef, PdfDocumentReference, PdfLayerIndex, PdfLayerReference, PdfPageIndex,
+    PdfPageReference, Point, Polygon, Rgb, path::PaintMode,
 };
 use rtext::index_set::{self, IndexSet};
 
@@ -363,6 +363,12 @@ impl layout::RenderContext for RenderContext {
 
         let layer = &self.layer;
         layer.begin_text_section();
+        if let Some(color) = style.color()
+            && *color != Rgba::black()
+        {
+            let color = color.into_rgba();
+            layer.set_fill_color(Color::Rgb(Rgb::new(color.0, color.1, color.2, None)));
+        }
         layer.set_font(font_ref, *font.size().unwrap() as f32);
         layer.set_text_cursor(from_unit(page_position.x), from_unit(page_position.y));
         layer.set_text_scaling(100.0 * font_scaling as f32);
@@ -385,6 +391,11 @@ impl layout::RenderContext for RenderContext {
         }
 
         layer.set_text_scaling(100.0);
+        if let Some(color) = style.color()
+            && *color != Rgba::black()
+        {
+            layer.set_fill_color(Color::Rgb(Rgb::new(0.0, 0.0, 0.0, None)));
+        }
         layer.end_text_section();
     }
 }
