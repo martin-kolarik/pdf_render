@@ -1,10 +1,10 @@
 use layout::{
-    position::{Offset, Quad, Size},
     Error, Layout,
+    position::{Offset, Quad, Size},
 };
 use printpdf::PdfDocument;
 
-use crate::{font::Fonts, RenderContext};
+use crate::{RenderContext, font::Fonts};
 
 use super::from_unit;
 
@@ -38,12 +38,28 @@ impl Renderer {
         self
     }
 
-    pub fn render(mut self, mut layout: Box<dyn Layout>) -> Result<Vec<u8>, Error> {
-        // log::error!("INPUT\n{:#?}", layout);
+    pub fn render(
+        mut self,
+        mut layout: Box<dyn Layout>,
+        debug_input: bool,
+        debug_measured: bool,
+        debug_laid_out: bool,
+    ) -> Result<Vec<u8>, Error> {
+        if debug_input {
+            tracing::debug!("INPUT\n{:#?}", layout);
+        }
+
         layout.measure(&mut self.context, self.content_size.clone())?;
-        // log::error!("MEASURED\n{:#?}", layout);
+
+        if debug_measured {
+            tracing::debug!("MEASURED\n{:#?}", layout);
+        }
+
         layout.lay_out(&mut self.context, Offset::zero(), self.content_size.clone())?;
-        // log::error!("LAYED OUT\n{:#?}", layout);
+
+        if debug_laid_out {
+            tracing::debug!("LAID OUT\n{:#?}", layout);
+        }
 
         self.context.complete_fonts()?;
         layout.render(&mut self.context)?;
@@ -62,13 +78,13 @@ mod tests {
     };
 
     use layout::{
-        position::{Quad, Size},
-        unit::{Mm, Pt},
         Axis, Border, DefaultFactory, Factory, Features, Font, LayoutBox, Rgba, Stroke,
         StyleBuilder, Text,
+        position::{Quad, Size},
+        unit::{Mm, Pt},
     };
 
-    use crate::{new_font_sources, new_fonts, Renderer};
+    use crate::{Renderer, new_font_sources, new_fonts};
 
     #[test]
     fn h_center() {
@@ -99,7 +115,9 @@ mod tests {
             .child(Text::new("Žáňa Nováková jr.").style(style))
             .child(DefaultFactory::hfill(1));
 
-        let pdf = renderer.render(Box::new(outer)).unwrap();
+        let pdf = renderer
+            .render(Box::new(outer), false, false, false)
+            .unwrap();
 
         BufWriter::new(File::create("test_fonts_th.pdf").unwrap())
             .write_all(&pdf)
@@ -143,7 +161,9 @@ mod tests {
             )
             .child(DefaultFactory::hfill(1).mark("7"));
 
-        let pdf = renderer.render(Box::new(outer)).unwrap();
+        let pdf = renderer
+            .render(Box::new(outer), false, false, false)
+            .unwrap();
 
         BufWriter::new(File::create("test_fonts_tv.pdf").unwrap())
             .write_all(&pdf)
@@ -192,7 +212,9 @@ mod tests {
             )
             .child(DefaultFactory::hfill(1));
 
-        let pdf = renderer.render(Box::new(outer)).unwrap();
+        let pdf = renderer
+            .render(Box::new(outer), false, false, false)
+            .unwrap();
 
         BufWriter::new(File::create("test_padding.pdf").unwrap())
             .write_all(&pdf)
@@ -248,7 +270,9 @@ mod tests {
             )
             .child(DefaultFactory::hfill(1));
 
-        let pdf = renderer.render(Box::new(outer)).unwrap();
+        let pdf = renderer
+            .render(Box::new(outer), false, false, false)
+            .unwrap();
 
         BufWriter::new(File::create("test_border.pdf").unwrap())
             .write_all(&pdf)
