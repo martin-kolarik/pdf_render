@@ -17,8 +17,8 @@ impl Renderer {
     pub fn new(document_title: &str, page_margin: Quad, page_size: Size, fonts: Fonts) -> Self {
         let (document, page, layer) = PdfDocument::new(
             document_title,
-            from_unit(page_size.width()),
-            from_unit(page_size.height()),
+            from_unit(page_size.width.base_size()),
+            from_unit(page_size.height.base_size()),
             "default",
         );
 
@@ -83,10 +83,10 @@ mod tests {
     };
 
     use layout::{
-        Axis, Border, DefaultFactory, Factory, Features, Font, LayoutBox, Rgba, Stroke,
-        StyleBuilder, Text,
+        Axis, Border, Features, Font, LayoutBox, Rgba, Stroke, StyleBuilder, Text, hbox, hfill,
         position::{Quad, Size},
         unit::{Mm, Pt},
+        vbox, vfill,
     };
 
     use crate::{Renderer, new_font_sources, new_fonts};
@@ -114,11 +114,11 @@ mod tests {
             Some(Features::default()),
         ));
 
-        let outer = DefaultFactory::hbox()
-            .size(Mm(190.0))
-            .child(DefaultFactory::hfill(2))
+        let outer = hbox()
+            .axis_size(Mm(190.0))
+            .child(hfill(2))
             .child(Text::new("Žáňa Nováková jr.").style(style))
-            .child(DefaultFactory::hfill(1));
+            .child(hfill(1));
 
         let pdf = renderer
             .render(Box::new(outer), false, false, false)
@@ -152,19 +152,19 @@ mod tests {
             Some(Features::default()),
         ));
 
-        let outer = DefaultFactory::hbox()
+        let outer = hbox()
             .mark("1")
-            .size(Mm(190.0))
-            .child(DefaultFactory::hfill(2).mark("2"))
+            .axis_size(Mm(190.0))
+            .child(hfill(2).mark("2"))
             .child(
-                DefaultFactory::vbox()
+                vbox()
                     .mark("3")
-                    .size(Mm(277.0))
-                    .child(DefaultFactory::vfill(1).mark("4"))
+                    .axis_size(Mm(277.0))
+                    .child(vfill(1).mark("4"))
                     .child(Text::new("Žáňa Nováková jr.").mark("5").style(style))
-                    .child(DefaultFactory::vfill(1).mark("6")),
+                    .child(vfill(1).mark("6")),
             )
-            .child(DefaultFactory::hfill(1).mark("7"));
+            .child(hfill(1).mark("7"));
 
         let pdf = renderer
             .render(Box::new(outer), false, false, false)
@@ -198,24 +198,24 @@ mod tests {
             Some(Features::default()),
         ));
 
-        let outer = DefaultFactory::hbox()
+        let outer = hbox()
             .mark("outer")
-            .size(Mm(190.0))
-            .child(DefaultFactory::hfill(2))
+            .axis_size(Mm(190.0))
+            .child(hfill(2))
             .child(
-                DefaultFactory::vbox()
+                vbox()
                     .mark("inner")
-                    .size(Mm(277.0))
-                    .child(DefaultFactory::vfill(1))
+                    .axis_size(Mm(277.0))
+                    .child(vfill(1))
                     .child(
                         LayoutBox::new(Axis::Vertical)
                             .mark("deco")
                             .style(StyleBuilder::new().with_padding(Quad::square(Mm(4.0))))
                             .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
-                    .child(DefaultFactory::vfill(1)),
+                    .child(vfill(1)),
             )
-            .child(DefaultFactory::hfill(1));
+            .child(hfill(1));
 
         let pdf = renderer
             .render(Box::new(outer), false, false, false)
@@ -249,15 +249,15 @@ mod tests {
             Some(Features::default()),
         ));
 
-        let outer = DefaultFactory::hbox()
+        let outer = hbox()
             .mark("outer")
-            .size(Mm(190.0))
-            .child(DefaultFactory::hfill(2))
+            .axis_size(Mm(190.0))
+            .child(hfill(2))
             .child(
-                DefaultFactory::vbox()
+                vbox()
                     .mark("inner")
-                    .size(Mm(277.0))
-                    .child(DefaultFactory::vfill(1))
+                    .axis_size(Mm(277.0))
+                    .child(vfill(1))
                     .child(
                         LayoutBox::new(Axis::Vertical)
                             .mark("deco")
@@ -271,9 +271,9 @@ mod tests {
                             )
                             .child(Text::new("Žáňa Nováková jr.").style(style).mark("TT")),
                     )
-                    .child(DefaultFactory::vfill(1)),
+                    .child(vfill(1)),
             )
-            .child(DefaultFactory::hfill(1));
+            .child(hfill(1));
 
         let pdf = renderer
             .render(Box::new(outer), false, false, false)

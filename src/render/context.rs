@@ -187,7 +187,10 @@ impl RenderContext {
     }
 
     fn swap_y(&self, page_position: &Offset) -> Offset {
-        Offset::new(page_position.x, self.page_size.height() - page_position.y)
+        Offset::new(
+            page_position.x,
+            self.page_size.base_height() - page_position.y,
+        )
     }
 
     fn new_page_internal(&mut self, margin: Option<&Quad>, size: Option<&Size>) {
@@ -202,8 +205,8 @@ impl RenderContext {
         self.page_end = None;
 
         let (page, layer) = self.document.add_page(
-            from_unit(self.page_size.width()),
-            from_unit(self.page_size.height()),
+            from_unit(self.page_size.base_width()),
+            from_unit(self.page_size.base_height()),
             "default",
         );
 
@@ -250,8 +253,8 @@ impl RenderContext {
         let page_start = Offset::new(Unit::zero(), content_offset);
 
         let mut page_end = page_start.clone();
-        page_end.x_advance(self.page_size.width() - self.page_margin.width());
-        page_end.y_advance(self.page_size.height() - self.page_margin.height());
+        page_end.x_advance(self.page_size.base_width() - self.page_margin.width());
+        page_end.y_advance(self.page_size.base_height() - self.page_margin.height());
 
         self.page_start = Some(page_start);
         self.page_end = Some(page_end);
@@ -294,18 +297,11 @@ impl layout::MeasureContext for RenderContext {
 
 impl layout::RenderContext for RenderContext {
     fn new_page(&mut self, options: Option<NewPageOptions>) -> bool {
-        if let Some(must_be_in_page) = options
-            .as_ref()
-            .and_then(|options| options.must_be_in_page())
-        {
-            self.check_page_break(must_be_in_page.0, must_be_in_page.1)
-        } else {
-            self.new_page_internal(
-                options.as_ref().and_then(|options| options.margin()),
-                options.as_ref().and_then(|options| options.size()),
-            );
-            true
-        }
+        self.new_page_internal(
+            options.as_ref().and_then(|options| options.margin.as_ref()),
+            options.as_ref().and_then(|options| options.size.as_ref()),
+        );
+        true
     }
 
     fn debug_frame(&mut self, content_position: &Offset, size: &Size) {
