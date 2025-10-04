@@ -38,6 +38,11 @@ impl Renderer {
         self
     }
 
+    pub fn with_debug_page_breaks(mut self, debug_page_breaks: bool) -> Self {
+        self.context = self.context.with_debug_page_breaks(debug_page_breaks);
+        self
+    }
+
     pub fn render(
         mut self,
         mut layout: Box<dyn Layout>,

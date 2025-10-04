@@ -126,6 +126,7 @@ pub struct RenderContext {
 
     style: Arc<Style>,
     debug_frame: bool,
+    debug_page_breaks: bool,
 }
 
 impl RenderContext {
@@ -151,6 +152,7 @@ impl RenderContext {
             page_end: None,
             style: Style::new_default(),
             debug_frame: false,
+            debug_page_breaks: false,
         };
         render_context.set_page_offsets(Unit::from(0));
 
@@ -159,6 +161,11 @@ impl RenderContext {
 
     pub fn with_debug_frame(mut self, debug_frame: bool) -> Self {
         self.debug_frame = debug_frame;
+        self
+    }
+
+    pub fn with_debug_page_breaks(mut self, debug_page_breaks: bool) -> Self {
+        self.debug_page_breaks = debug_page_breaks;
         self
     }
 
@@ -215,8 +222,20 @@ impl RenderContext {
         let mut new_page = false;
         if let Some(page_end) = &self.page_end {
             if content_offset + content_height > page_end.y {
+                if self.debug_page_breaks {
+                    tracing::debug!(
+                        "Page BREAK at offset {content_offset:?}, content height {content_height:?}, page end {:?}",
+                        page_end.y
+                    );
+                }
+
                 self.new_page_internal(None, None);
                 new_page = true;
+            } else if self.debug_page_breaks {
+                tracing::debug!(
+                    "Page fill CHECK at offset {content_offset:?}, content height {content_height:?}, page end {:?}",
+                    page_end.y
+                );
             }
         }
 
