@@ -127,6 +127,8 @@ pub struct RenderContext {
     style: Arc<Style>,
     debug_frame: bool,
     debug_page_breaks: bool,
+
+    page_break_reservations: Vec<bool>, // bool = avoid break
 }
 
 impl RenderContext {
@@ -153,6 +155,7 @@ impl RenderContext {
             style: Style::new_default(),
             debug_frame: false,
             debug_page_breaks: false,
+            page_break_reservations: vec![],
         };
         render_context.set_page_offsets(Unit::from(0));
 
@@ -193,7 +196,7 @@ impl RenderContext {
         )
     }
 
-    fn new_page_internal(&mut self, margin: Option<&Quad>, size: Option<&Size>) {
+    fn new_page(&mut self, margin: Option<&Quad>, size: Option<&Size>) {
         if let Some(margin) = margin {
             self.page_margin = margin.clone();
         }
@@ -218,13 +221,32 @@ impl RenderContext {
         &mut self,
         content_offset: impl Into<Unit>,
         content_height: impl Into<Unit>,
+        reserve_content_height: bool,
     ) -> bool {
+        if Some(&true) == self.page_break_reservations.last() {
+            return false;
+        }
+
         let content_offset = content_offset.into();
         let content_height = content_height.into();
 
+        let check_page_break = if reserve_content_height {
+            let fits_into_page =
+                content_height <= self.page_size.base_height() - self.page_margin.height();
+            self.page_break_reservations.push(fits_into_page);
+            fits_into_page
+        } else {
+            true
+        };
+
         let mut new_page = false;
         if let Some(page_end) = &self.page_end {
-            if content_offset + content_height > page_end.y {
+            if !check_page_break {
+                tracing::debug!(
+                    "Page OVERFLOWN at offset {content_offset:?}, content height {content_height:?}, page end {:?}",
+                    page_end.y
+                );
+            } else if content_offset + content_height > page_end.y {
                 if self.debug_page_breaks {
                     tracing::debug!(
                         "Page BREAK at offset {content_offset:?}, content height {content_height:?}, page end {:?}",
@@ -232,7 +254,7 @@ impl RenderContext {
                     );
                 }
 
-                self.new_page_internal(None, None);
+                self.new_page(None, None);
                 new_page = true;
             } else if self.debug_page_breaks {
                 tracing::debug!(
@@ -260,7 +282,7 @@ impl RenderContext {
         self.page_end = Some(page_end);
     }
 
-    fn line_inner(&self, content_points: &[&Offset]) {
+    fn line(&self, content_points: &[&Offset]) {
         let line_points = content_points.iter().map(|point| {
             let position = self.swap_y(point);
             (
@@ -296,14 +318,6 @@ impl layout::MeasureContext for RenderContext {
 }
 
 impl layout::RenderContext for RenderContext {
-    fn new_page(&mut self, options: Option<NewPageOptions>) -> bool {
-        self.new_page_internal(
-            options.as_ref().and_then(|options| options.margin.as_ref()),
-            options.as_ref().and_then(|options| options.size.as_ref()),
-        );
-        true
-    }
-
     fn debug_frame(&mut self, content_position: &Offset, size: &Size) {
         if self.debug_frame {
             let content_position = self.page_content_offset(content_position);
@@ -322,12 +336,30 @@ impl layout::RenderContext for RenderContext {
                 .set_outline_color(from_rgba(&Rgba::from((240, 240, 240, 1.0))));
             self.layer.set_outline_thickness(0.25);
 
-            self.line_inner(&points);
+            RenderContext::line(self, &points);
         }
     }
 
+    fn check_page_break(&mut self, offset: Unit, height: Unit, reserve_height: bool) -> bool {
+        RenderContext::check_page_break(self, offset, height, reserve_height)
+    }
+
+    fn release_page_break_reservation(&mut self) {
+        if self.page_break_reservations.pop().is_none() {
+            tracing::warn!("Page break reservation released when not defined.");
+        }
+    }
+
+    fn new_page(&mut self, options: Option<NewPageOptions>) {
+        RenderContext::new_page(
+            self,
+            options.as_ref().and_then(|options| options.margin.as_ref()),
+            options.as_ref().and_then(|options| options.size.as_ref()),
+        );
+    }
+
     fn line(&mut self, from: &Offset, to: &Offset, stroke: &Stroke) {
-        self.check_page_break(from.y, 0);
+        self.check_page_break(from.y, 0, false);
 
         let from = self.page_content_offset(from);
         let from = self.page_margin.offset(&from);
@@ -339,7 +371,7 @@ impl layout::RenderContext for RenderContext {
         self.layer
             .set_outline_thickness(stroke.thickness().0 as f32);
 
-        self.line_inner(&[&from, &to]);
+        RenderContext::line(self, &[&from, &to]);
     }
 
     fn text(
@@ -365,7 +397,7 @@ impl layout::RenderContext for RenderContext {
             .map(FillPerMille::scaling)
             .unwrap_or(1.0);
 
-        self.check_page_break(content_position.y, text.height * font_size);
+        self.check_page_break(content_position.y, text.height * font_size, false);
 
         let content_position = self.page_content_offset(content_position);
         let mut page_position = self.page_margin.offset(&content_position);
