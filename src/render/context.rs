@@ -224,6 +224,10 @@ impl RenderContext {
         reserve_content_height: bool,
     ) -> bool {
         if Some(&true) == self.page_break_reservations.last() {
+            if reserve_content_height {
+                // keep stack symmetrical to pop(), which is unconditional
+                self.page_break_reservations.push(true);
+            }
             return false;
         }
 
