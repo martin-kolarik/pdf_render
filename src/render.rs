@@ -3,8 +3,8 @@ pub(crate) use context::*;
 
 mod renderer;
 use layout::{
-    unit::{Mm, Pt, Unit},
     Rgba,
+    unit::{Mm, Pt, Unit},
 };
 use printpdf::Color;
 pub use renderer::*;

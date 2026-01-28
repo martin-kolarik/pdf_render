@@ -33,19 +33,15 @@ impl FontSources {
         }
     }
 
-    pub fn add(&mut self, name: impl Into<String>, source: &'static [u8]) -> Result<(), Error> {
+    pub fn add(&self, name: impl Into<String>, source: &'static [u8]) -> Result<(), Error> {
         self.add_cow(name, Cow::Borrowed(source))
     }
 
-    pub fn add_owned(&mut self, name: impl Into<String>, source: Vec<u8>) -> Result<(), Error> {
+    pub fn add_owned(&self, name: impl Into<String>, source: Vec<u8>) -> Result<(), Error> {
         self.add_cow(name, Cow::Owned(source))
     }
 
-    fn add_cow(
-        &mut self,
-        name: impl Into<String>,
-        source: Cow<'static, [u8]>,
-    ) -> Result<(), Error> {
+    fn add_cow(&self, name: impl Into<String>, source: Cow<'static, [u8]>) -> Result<(), Error> {
         self.data
             .write()
             .map_err(|l| Error::LockError(l.to_string()))?
@@ -161,7 +157,7 @@ impl Font {
 
         let shapes = font
             .shape(glyphs, tag::LATN, None, &features, None, true)
-            .map_or_else(|(_, shapes)| shapes, |shapes| shapes);
+            .unwrap_or_else(|(_, shapes)| shapes);
 
         let positions = glyph_position::GlyphLayout::new(
             font,
@@ -180,7 +176,7 @@ impl Font {
             .zip(positions.iter())
             .map(|(info, position)| {
                 GlyphPosition::new(
-                    info.glyph.unicodes.get(0).copied(),
+                    info.glyph.unicodes.first().copied(),
                     info.glyph.glyph_index,
                     Em(position.hori_advance as f64 / units_per_em),
                     Em(position.vert_advance as f64 / units_per_em),
