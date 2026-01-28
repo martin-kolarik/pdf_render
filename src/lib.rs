@@ -1,13 +1,9 @@
 mod font;
-pub use font::{FontSources, Fonts};
+pub use font::FontCache;
 
 mod render;
 pub use render::*;
 
-pub fn new_font_sources() -> FontSources {
-    FontSources::new()
-}
-
-pub fn new_fonts(sources: FontSources) -> Fonts {
-    Fonts::new(sources)
+pub fn new_font_cache() -> FontCache {
+    FontCache::new()
 }

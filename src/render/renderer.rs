@@ -4,7 +4,7 @@ use layout::{
 };
 use printpdf::PdfDocument;
 
-use crate::{RenderContext, font::Fonts};
+use crate::{RenderContext, font::FontCache};
 
 use super::from_unit;
 
@@ -14,7 +14,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    pub fn new(document_title: &str, page_margin: Quad, page_size: Size, fonts: Fonts) -> Self {
+    pub fn new(document_title: &str, page_margin: Quad, page_size: Size, fonts: FontCache) -> Self {
         let (document, page, layer) = PdfDocument::new(
             document_title,
             from_unit(page_size.width.base_size()),
@@ -89,16 +89,14 @@ mod tests {
         vbox, vfill,
     };
 
-    use crate::{Renderer, new_font_sources, new_fonts};
+    use crate::{Renderer, new_font_cache};
 
     #[test]
     fn h_center() {
-        let mut sources = new_font_sources();
+        let fonts = new_font_cache();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        sources.add("LatoReg", font_bin).unwrap();
-
-        let fonts = new_fonts(sources);
+        fonts.add("LatoReg", font_bin).unwrap();
 
         let renderer = Renderer::new(
             "Text",
@@ -131,12 +129,10 @@ mod tests {
 
     #[test]
     fn v_center() {
-        let mut sources = new_font_sources();
+        let fonts = new_font_cache();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        sources.add("LatoReg", font_bin).unwrap();
-
-        let fonts = new_fonts(sources);
+        fonts.add("LatoReg", font_bin).unwrap();
 
         let renderer = Renderer::new(
             "Text",
@@ -177,12 +173,10 @@ mod tests {
 
     #[test]
     fn padding() {
-        let mut sources = new_font_sources();
+        let fonts = new_font_cache();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        sources.add("LatoReg", font_bin).unwrap();
-
-        let fonts = new_fonts(sources);
+        fonts.add("LatoReg", font_bin).unwrap();
 
         let renderer = Renderer::new(
             "Text",
@@ -228,12 +222,10 @@ mod tests {
 
     #[test]
     fn border() {
-        let mut sources = new_font_sources();
+        let fonts = new_font_cache();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        sources.add("LatoReg", font_bin).unwrap();
-
-        let fonts = new_fonts(sources);
+        fonts.add("LatoReg", font_bin).unwrap();
 
         let renderer = Renderer::new(
             "Text",

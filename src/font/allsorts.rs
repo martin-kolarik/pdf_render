@@ -14,6 +14,7 @@ use rtext::{
 };
 use std::{
     borrow::{Borrow, Cow},
+    collections::hash_map::Entry,
     sync::{Arc, Mutex, RwLock},
 };
 
@@ -21,66 +22,79 @@ const NON_TTC_TABLE: usize = 0;
 
 type FontSource = Arc<Cow<'static, [u8]>>;
 
-#[derive(Clone)]
-pub struct FontSources {
-    data: Arc<RwLock<HashMap<String, FontSource>>>,
+struct CachedFont {
+    source: FontSource,
+    parsed: Option<Font>,
 }
 
-impl FontSources {
+#[derive(Clone)]
+pub struct FontCache {
+    inner: Arc<RwLock<HashMap<String, CachedFont>>>,
+}
+
+impl FontCache {
     pub fn new() -> Self {
         Self {
-            data: Arc::new(RwLock::new(hash_map::new())),
+            inner: Arc::new(RwLock::new(hash_map::new())),
+        }
+    }
+
+    pub fn remove(&self, name: impl AsRef<str>) -> bool {
+        let lock = self
+            .inner
+            .write()
+            .map_err(|e| Error::LockError(e.to_string()));
+
+        match lock {
+            Ok(mut lock) => lock.remove(name.as_ref()).is_some(),
+            Err(_) => false,
         }
     }
 
     pub fn add(&self, name: impl Into<String>, source: &'static [u8]) -> Result<(), Error> {
-        self.add_cow(name, Cow::Borrowed(source))
+        self.add_cow(name, Cow::Borrowed(source), false)
+    }
+
+    pub fn replace(&self, name: impl Into<String>, source: &'static [u8]) -> Result<(), Error> {
+        self.add_cow(name, Cow::Borrowed(source), true)
     }
 
     pub fn add_owned(&self, name: impl Into<String>, source: Vec<u8>) -> Result<(), Error> {
-        self.add_cow(name, Cow::Owned(source))
+        self.add_cow(name, Cow::Owned(source), false)
     }
 
-    fn add_cow(&self, name: impl Into<String>, source: Cow<'static, [u8]>) -> Result<(), Error> {
-        self.data
+    pub fn replace_owned(&self, name: impl Into<String>, source: Vec<u8>) -> Result<(), Error> {
+        self.add_cow(name, Cow::Owned(source), true)
+    }
+
+    fn add_cow(
+        &self,
+        name: impl Into<String>,
+        source: Cow<'static, [u8]>,
+        replace: bool,
+    ) -> Result<(), Error> {
+        match self
+            .inner
             .write()
             .map_err(|l| Error::LockError(l.to_string()))?
-            .insert(name.into(), Arc::new(source));
-        Ok(())
-    }
-
-    pub fn get<B>(&self, name: &B) -> Result<FontSource, Error>
-    where
-        B: Borrow<str> + ?Sized,
-    {
-        let name = name.borrow();
-        self.data
-            .read()
-            .map_err(|l| Error::LockError(l.to_string()))?
-            .get(name)
-            .cloned()
-            .ok_or_else(|| Error::UnknownFont(name.to_owned()))
-    }
-}
-
-impl Default for FontSources {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[derive(Clone)]
-pub struct Fonts {
-    sources: FontSources,
-    data: Arc<RwLock<HashMap<String, Font>>>,
-}
-
-impl Fonts {
-    pub fn new(sources: FontSources) -> Self {
-        Self {
-            sources,
-            data: Arc::new(RwLock::new(hash_map::new())),
+            .entry(name.into())
+        {
+            Entry::Occupied(mut occupied) => {
+                if replace {
+                    *occupied.get_mut() = CachedFont {
+                        source: Arc::new(source),
+                        parsed: None,
+                    };
+                }
+            }
+            Entry::Vacant(vacant) => {
+                vacant.insert(CachedFont {
+                    source: Arc::new(source),
+                    parsed: None,
+                });
+            }
         }
+        Ok(())
     }
 
     pub fn get<B>(&self, name: &B) -> Result<Font, Error>
@@ -88,26 +102,48 @@ impl Fonts {
         B: Borrow<str> + ?Sized,
     {
         let name = name.borrow();
-        if let Some(font) = self
-            .data
-            .read()
-            .map_err(|l| Error::LockError(l.to_string()))?
-            .get(name)
+
         {
-            return Ok(font.clone());
+            let lock = self
+                .inner
+                .read()
+                .map_err(|e| Error::LockError(e.to_string()))?;
+
+            let font = lock
+                .get(name)
+                .ok_or_else(|| Error::UnknownFont(name.to_owned()))?;
+
+            if let Some(font) = font.parsed.clone() {
+                return Ok(font.clone());
+            }
         }
 
-        let source = self.sources.get(name)?;
-        let cached_font = CachedAllsortsFont::from_source(name, source)?;
-        let font = Font::new(cached_font);
-        self.data
+        let mut lock = self
+            .inner
             .write()
-            .map_err(|l| Error::LockError(l.to_string()))?
-            .insert(name.to_owned(), font.clone());
+            .map_err(|e| Error::LockError(e.to_string()))?;
 
-        Ok(font)
+        let font = lock
+            .get_mut(name)
+            .ok_or_else(|| Error::UnknownFont(name.to_owned()))?;
+
+        let cached_font = CachedAllsortsFont::from_source(name, font.source.clone())?;
+        let parsed = Font::new(cached_font);
+        font.parsed = Some(parsed.clone());
+
+        Ok(parsed)
     }
 }
+
+impl Default for FontCache {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+
+unsafe impl Send for Font {}
+unsafe impl Sync for Font {}
 
 #[derive(Clone)]
 pub struct Font {
@@ -268,9 +304,7 @@ mod tests {
     use printpdf::{Color, Mm, PdfDocument, Point, Polygon, Pt, Rgb, path::PaintMode};
     use rtext::index_set;
 
-    use crate::FontSources;
-
-    use super::Fonts;
+    use super::FontCache;
 
     #[test]
     fn render() {
@@ -299,10 +333,8 @@ mod tests {
         // current_layer.set_word_spacing(3000.0);
         // current_layer.set_character_spacing(0.0);
 
-        let mut sh_sources = FontSources::new();
-        sh_sources.add("LatoReg", bin_font).unwrap();
-
-        let sh_fonts = Fonts::new(sh_sources);
+        let sh_fonts = FontCache::new();
+        sh_fonts.add("LatoReg", bin_font).unwrap();
 
         let sh_font = sh_fonts.get("LatoReg").unwrap();
 

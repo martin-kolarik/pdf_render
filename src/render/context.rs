@@ -11,7 +11,7 @@ use printpdf::{
 };
 use rtext::index_set::{self, IndexSet};
 
-use crate::font::Fonts;
+use crate::font::FontCache;
 
 use super::{from_pt, from_rgba, from_unit};
 
@@ -35,12 +35,12 @@ impl RenderFont {
 }
 
 pub struct RenderFonts {
-    fonts: Fonts,
+    fonts: FontCache,
     render_fonts: Vec<RenderFont>,
 }
 
 impl RenderFonts {
-    pub fn new(fonts: Fonts) -> Self {
+    pub fn new(fonts: FontCache) -> Self {
         Self {
             fonts,
             render_fonts: vec![],
@@ -138,7 +138,7 @@ impl RenderContext {
         layer: PdfLayerIndex,
         margin: Quad,
         size: Size,
-        fonts: Fonts,
+        fonts: FontCache,
     ) -> Self {
         let page = document.get_page(page);
         let layer = page.get_layer(layer);
@@ -462,18 +462,16 @@ mod tests {
     };
     use printpdf::PdfDocument;
 
-    use crate::{new_font_sources, new_fonts};
+    use crate::new_font_cache;
 
     use super::RenderContext;
 
     #[test]
     fn render_context() {
-        let mut sources = new_font_sources();
+        let fonts = new_font_cache();
 
         let font_bin = include_bytes!("../../tests/Lato-Regular.ttf").as_ref();
-        sources.add("LatoReg", font_bin).unwrap();
-
-        let fonts = new_fonts(sources);
+        fonts.add("LatoReg", font_bin).unwrap();
 
         let (document, page, layer) =
             PdfDocument::new("Test", printpdf::Mm(210.0), printpdf::Mm(297.0), "default");
