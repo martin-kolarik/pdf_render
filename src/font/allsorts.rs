@@ -12,8 +12,9 @@ use rtext::{
     hash_map::{self, HashMap},
     index_set::IndexSet,
 };
+use smol_str::{SmolStr, ToSmolStr};
 use std::{
-    borrow::{Borrow, Cow},
+    borrow::Cow,
     collections::hash_map::Entry,
     sync::{Arc, Mutex, RwLock},
 };
@@ -29,7 +30,7 @@ struct CachedFont {
 
 #[derive(Clone)]
 pub struct FontCache {
-    inner: Arc<RwLock<HashMap<String, CachedFont>>>,
+    inner: Arc<RwLock<HashMap<SmolStr, CachedFont>>>,
 }
 
 impl FontCache {
@@ -43,7 +44,7 @@ impl FontCache {
         let lock = self
             .inner
             .write()
-            .map_err(|e| Error::LockError(e.to_string()));
+            .map_err(|e| Error::LockError(e.to_string().into()));
 
         match lock {
             Ok(mut lock) => lock.remove(name.as_ref()).is_some(),
@@ -51,33 +52,33 @@ impl FontCache {
         }
     }
 
-    pub fn add(&self, name: impl Into<String>, source: &'static [u8]) -> Result<(), Error> {
+    pub fn add(&self, name: impl ToSmolStr, source: &'static [u8]) -> Result<(), Error> {
         self.add_cow(name, Cow::Borrowed(source), false)
     }
 
-    pub fn replace(&self, name: impl Into<String>, source: &'static [u8]) -> Result<(), Error> {
+    pub fn replace(&self, name: impl ToSmolStr, source: &'static [u8]) -> Result<(), Error> {
         self.add_cow(name, Cow::Borrowed(source), true)
     }
 
-    pub fn add_owned(&self, name: impl Into<String>, source: Vec<u8>) -> Result<(), Error> {
+    pub fn add_owned(&self, name: impl ToSmolStr, source: Vec<u8>) -> Result<(), Error> {
         self.add_cow(name, Cow::Owned(source), false)
     }
 
-    pub fn replace_owned(&self, name: impl Into<String>, source: Vec<u8>) -> Result<(), Error> {
+    pub fn replace_owned(&self, name: impl ToSmolStr, source: Vec<u8>) -> Result<(), Error> {
         self.add_cow(name, Cow::Owned(source), true)
     }
 
     fn add_cow(
         &self,
-        name: impl Into<String>,
+        name: impl ToSmolStr,
         source: Cow<'static, [u8]>,
         replace: bool,
     ) -> Result<(), Error> {
         match self
             .inner
             .write()
-            .map_err(|l| Error::LockError(l.to_string()))?
-            .entry(name.into())
+            .map_err(|e| Error::LockError(e.to_string().into()))?
+            .entry(name.to_smolstr())
         {
             Entry::Occupied(mut occupied) => {
                 if replace {
@@ -97,21 +98,18 @@ impl FontCache {
         Ok(())
     }
 
-    pub fn get<B>(&self, name: &B) -> Result<Font, Error>
-    where
-        B: Borrow<str> + ?Sized,
-    {
-        let name = name.borrow();
+    pub fn get(&self, name: impl AsRef<str>) -> Result<Font, Error> {
+        let name = name.as_ref();
 
         {
             let lock = self
                 .inner
                 .read()
-                .map_err(|e| Error::LockError(e.to_string()))?;
+                .map_err(|e| Error::LockError(e.to_string().into()))?;
 
             let font = lock
                 .get(name)
-                .ok_or_else(|| Error::UnknownFont(name.to_owned()))?;
+                .ok_or_else(|| Error::UnknownFont(name.to_smolstr()))?;
 
             if let Some(font) = font.parsed.clone() {
                 return Ok(font.clone());
@@ -121,11 +119,11 @@ impl FontCache {
         let mut lock = self
             .inner
             .write()
-            .map_err(|e| Error::LockError(e.to_string()))?;
+            .map_err(|e| Error::LockError(e.to_string().into()))?;
 
         let font = lock
             .get_mut(name)
-            .ok_or_else(|| Error::UnknownFont(name.to_owned()))?;
+            .ok_or_else(|| Error::UnknownFont(name.into()))?;
 
         let cached_font = CachedAllsortsFont::from_source(name, font.source.clone())?;
         let parsed = Font::new(cached_font);
@@ -140,7 +138,6 @@ impl Default for FontCache {
         Self::new()
     }
 }
-
 
 unsafe impl Send for Font {}
 unsafe impl Sync for Font {}
@@ -173,12 +170,13 @@ impl Font {
         f(&mut cached_font)
     }
 
-    pub fn typeset<B>(&self, text: &B, features: &Features) -> Result<TextPosition, Error>
-    where
-        B: Borrow<str> + ?Sized,
-    {
+    pub fn typeset(
+        &self,
+        text: impl AsRef<str>,
+        features: &Features,
+    ) -> Result<TextPosition, Error> {
         self.with_mut(|cached_font| {
-            cached_font.with_font_mut(|font| Self::typeset_inner(font, text.borrow(), features))
+            cached_font.with_font_mut(|font| Self::typeset_inner(font, text.as_ref(), features))
         })
     }
 
@@ -237,15 +235,12 @@ impl Font {
         })
     }
 
-    pub fn typeset_collect<B>(
+    pub fn typeset_collect(
         &self,
         glyph_collector: &mut IndexSet<u16>,
-        text: &B,
+        text: impl AsRef<str>,
         features: &Features,
-    ) -> Result<TextPosition, Error>
-    where
-        B: Borrow<str> + ?Sized,
-    {
+    ) -> Result<TextPosition, Error> {
         let mut positions = self.typeset(text, features)?;
         for glyph in positions.positions.iter_mut() {
             glyph.set_glyph_index(glyph_collector.insert_full(glyph.glyph_index).0 as u16);
@@ -291,7 +286,7 @@ impl CachedAllsortsFont {
             let scope = ReadScope::new(source);
             let font_data = scope.read::<FontData>()?;
             let provider = font_data.table_provider(NON_TTC_TABLE)?;
-            allsorts::Font::new(provider).map_err(|_| Error::MalformedFont(name.to_owned()))
+            allsorts::Font::new(provider).map_err(|_| Error::MalformedFont(name.into()))
         })
     }
 }

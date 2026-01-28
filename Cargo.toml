@@ -14,4 +14,5 @@ layout = { git = "https://github.com/martin-kolarik/layout.git", features = [
 ouroboros = { version = "^0.18" }
 printpdf = { version = "^0.7" }
 rtext = { git = "https://github.com/martin-kolarik/rtext.git" }
+smol_str = { version = "^0.3", default-features = false }
 tracing = { version = "^0.1", default-features = false, features = ["std"] }

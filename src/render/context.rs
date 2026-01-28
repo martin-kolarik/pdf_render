@@ -10,24 +10,25 @@ use printpdf::{
     PdfPageReference, Point, Polygon, Rgb, path::PaintMode,
 };
 use rtext::index_set::{self, IndexSet};
+use smol_str::{SmolStr, ToSmolStr};
 
 use crate::font::FontCache;
 
 use super::{from_pt, from_rgba, from_unit};
 
 struct RenderFont {
-    name: String,
+    name: SmolStr,
     glyph_collector: IndexSet<u16>,
     font_ref: Option<IndirectFontRef>,
 }
 
 impl RenderFont {
-    fn new(name: impl Into<String>) -> Self {
+    fn new(name: impl ToSmolStr) -> Self {
         let mut collector = index_set::new();
         collector.insert(0);
 
         Self {
-            name: name.into(),
+            name: name.to_smolstr(),
             glyph_collector: collector,
             font_ref: None,
         }
@@ -47,17 +48,12 @@ impl RenderFonts {
         }
     }
 
-    pub fn typeset<F, B>(
+    pub fn typeset(
         &mut self,
-        font_name: &F,
-        text: &B,
+        font_name: &str,
+        text: &str,
         features: &Features,
-    ) -> Result<TextPosition, Error>
-    where
-        F: Borrow<str> + ?Sized,
-        B: Borrow<str> + ?Sized,
-    {
-        let font_name = font_name.borrow();
+    ) -> Result<TextPosition, Error> {
         let glyph_collector = match self
             .render_fonts
             .iter_mut()
@@ -89,7 +85,7 @@ impl RenderFonts {
             render_font.font_ref = Some(
                 document
                     .add_external_font(reader)
-                    .map_err(|error| Error::PdfWrite(error.to_string()))?,
+                    .map_err(|error| Error::PdfWrite(error.to_string().into()))?,
             );
         }
 
@@ -179,7 +175,7 @@ impl RenderContext {
     pub fn save_to_bytes(self) -> Result<Vec<u8>, Error> {
         self.document
             .save_to_bytes()
-            .map_err(|error| Error::PdfWrite(error.to_string()))
+            .map_err(|error| Error::PdfWrite(error.to_string().into()))
     }
 
     fn page_content_offset(&self, content_offset: &Offset) -> Offset {
@@ -309,14 +305,13 @@ impl layout::MeasureContext for RenderContext {
 
     fn typeset(&mut self, style: &Style, text: &str) -> Result<TextPosition, Error> {
         let font = style.font().merge(self.style.font());
-        if font.name().is_none() || font.size().is_none() {
-            Err(Error::UnknownFont("Font name or size is undefined".into()))
+        if let Some(name) = font.name()
+            && font.size().is_some()
+        {
+            self.fonts
+                .typeset(name, text, &font.features().cloned().unwrap_or_default())
         } else {
-            self.fonts.typeset(
-                font.name().unwrap(),
-                text,
-                &font.features().cloned().unwrap_or_default(),
-            )
+            Err(Error::UnknownFont("Font name or size is undefined".into()))
         }
     }
 }
