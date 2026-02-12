@@ -1,5 +1,6 @@
 use std::{borrow::Borrow, sync::Arc};
 
+use image::DynamicImage;
 use layout::{
     Error, Features, NewPageOptions, Rgba, Stroke, Style, TextPosition,
     position::{Offset, Quad, Size},
@@ -443,6 +444,10 @@ impl layout::RenderContext for RenderContext {
             layer.set_fill_color(Color::Rgb(Rgb::new(0.0, 0.0, 0.0, None)));
         }
         layer.end_text_section();
+    }
+
+    fn image(&mut self, _: &Offset, _: &Offset, _: DynamicImage) {
+        todo!("Image rendering is not implemented yet");
     }
 }
 

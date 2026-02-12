@@ -7,6 +7,7 @@ edition = "2024"
 allsorts = { version = "^0.15", default-features = false, features = [
     "flate2_zlib",
 ] }
+image = { version = "^0.24", default-features = false }
 layout = { git = "https://github.com/martin-kolarik/layout.git", features = [
     "color",
     "layout",
