@@ -3,7 +3,7 @@ use allsorts::{
     font::MatchingPresentation,
     font_data::{DynamicFontTableProvider, FontData},
     glyph_position,
-    subset::subset,
+    subset::{CmapTarget, SubsetProfile, subset},
     tag,
 };
 use layout::{Error, Features, GlyphPosition, TextPosition, unit::Em};
@@ -201,7 +201,7 @@ impl Font {
         )
         .glyph_positions()?;
 
-        let units_per_em = font.head_table().unwrap().unwrap().units_per_em as f64;
+        let units_per_em = font.head_table.units_per_em as f64;
         let ascender = font.hhea_table.ascender as f64 / units_per_em;
         let descender = -font.hhea_table.descender as f64 / units_per_em;
 
@@ -265,7 +265,12 @@ impl Font {
         let font_data = scope.read::<FontData>()?;
         let provider = font_data.table_provider(NON_TTC_TABLE)?;
 
-        match subset(&provider, &subsetted_glyphs) {
+        match subset(
+            &provider,
+            &subsetted_glyphs,
+            &SubsetProfile::Pdf,
+            CmapTarget::Unrestricted,
+        ) {
             Ok(subset) => Ok(Some(subset)),
             Err(error) => Err(error.into()),
         }
