@@ -190,7 +190,7 @@ impl Font {
         let glyphs = font.map_glyphs(text, tag::LATN, MatchingPresentation::NotRequired);
 
         let shapes = font
-            .shape(glyphs, tag::LATN, None, &features, None, true)
+            .shape(glyphs, tag::LATN, None, features, &[], None, true)
             .unwrap_or_else(|(_, shapes)| shapes);
 
         let positions = glyph_position::GlyphLayout::new(
