@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-allsorts = { version = "^0.16", default-features = false, features = [
+allsorts = { version = "^0.17", default-features = false, features = [
     "flate2_zlib",
 ] }
 image = { version = "^0.25", default-features = false }
